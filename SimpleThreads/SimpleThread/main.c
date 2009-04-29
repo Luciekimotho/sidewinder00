@@ -24,37 +24,40 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#import "SimpleThread.h"
+#include "SimpleThread.h"
+#include <unistd.h>
 
-#define MAX_THREADS 10
+uint8_t flag = 0;
 
-struct ThreadInfo {
-	struct SimpleThread simpleThread;
-	void (*threadFunction)(struct SimpleThread*);
-};
-
-struct ThreadInfo threads[MAX_THREADS];
-uint8_t threadNumber = 0;
-uint8_t currentThread = 0;
-
-int addNewThread(void (*threadFunction)(struct SimpleThread*)) {
-	if (threadNumber < MAX_THREADS) {
-		threads[threadNumber].simpleThread.currentPosition = 0;
-		threads[threadNumber].threadFunction = threadFunction;
-		threadNumber++;
-		return 0;
-	} else {
-		return -1;
-	}
+SIMPLE_THREAD(testThread) {
+	ST_START
+	sleep(1);
+	printf("Thread1\n");
+	flag = 1;
+	ST_END
 }
 
-void executeThreads() {
-	while(1) {
-		if (currentThread == threadNumber) {
-			currentThread = 0;
-		}
-		threads[currentThread].threadFunction(&(threads[currentThread].simpleThread));
-		currentThread++;
-	}
+SIMPLE_THREAD(testThread2) {
+	static uint8_t counter = 0;
+	ST_START
+	printf("Thread 2 after initialization\n");
+	printf("Got here %d times!\n", counter++);
+	ST_WAITFOR(flag == 1)
+	printf("Condition met!\n");
+	flag = 0;
+	ST_YIELD
+	printf("Thread 2 after yielding\n");
+	ST_END
+}
+
+int main(int argc, char** argv) {
+
+	printf("Configuring the thread\n");
+	addNewThread(testThread);
+	addNewThread(testThread2);
+	addNewThread(testThread2);
+	executeThreads();
+
+	return 0;
 }
 
