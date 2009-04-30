@@ -37,9 +37,23 @@ struct ThreadInfo threads[MAX_THREADS];
 uint8_t threadNumber = 0;
 uint8_t currentThread = 0;
 
+void setupDataStructures() {
+	uint8_t i;
+	for (i = 0; i < MAX_THREADS; i++) {
+		threads[i].threadFunction = 0;
+	}
+}
+
+void removeThread(uint8_t threadNumber) {
+	if (threadNumber < MAX_THREADS) {
+		threads[threadNumber].threadFunction = 0;
+	}
+}
+
 int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer) {
 	if (threadNumber < MAX_THREADS) {
 		threads[threadNumber].simpleThread.currentPosition = 0;
+		threads[threadNumber].simpleThread.threadNumber = threadNumber;
 		threads[threadNumber].threadFunction = threadFunction;
 		threads[threadNumber].simpleThread.localVariables = localVarPointer;
 		threadNumber++;
@@ -54,7 +68,9 @@ void executeThreads() {
 		if (currentThread == threadNumber) {
 			currentThread = 0;
 		}
-		threads[currentThread].threadFunction(&(threads[currentThread].simpleThread));
+		if (threads[currentThread].threadFunction != 0) {
+			threads[currentThread].threadFunction(&(threads[currentThread].simpleThread));
+		}
 		currentThread++;
 	}
 }

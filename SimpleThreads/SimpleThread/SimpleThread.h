@@ -38,7 +38,9 @@
 #define ADD_NEW_THREAD(THREAD_NAME)		struct THREAD_NAME ## _local PASTE(local, __LINE__); \
 										addNewThread(THREAD_NAME, & PASTE(local, __LINE__)); \
 
-#define NONE uint8_t only;
+#define NONE uint8_t hiddenVar;
+
+#define ST_GETTHREADNUMBER st->threadNumber
 
 #define SIMPLE_THREAD(THREAD_NAME, LOCAL_VARIABLES)		struct THREAD_NAME ## _local { \
 															LOCAL_VARIABLES \
@@ -65,18 +67,22 @@
 										break; \
 									case __LINE__: \
 
-#define ST_END 							st->currentPosition = 1; \
+#define ST_LOOPOVER 					st->currentPosition = 1; \
 										break; \
-									};
 
-#define ST_WAIT_UNTIL(condition) if (condition);
+#define ST_END							removeThread(st->threadNumber); \
+										break; \
+
+#define ST_TERMINATOR				};
 
 struct SimpleThread {
 	uint8_t currentPosition;
+	uint8_t threadNumber;
 	void *localVariables;
 };
 
 int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer);
 void executeThreads();
+void removeThread(uint8_t threadNumber);
 
 #endif /* SIMPLETHREAD_H_ */

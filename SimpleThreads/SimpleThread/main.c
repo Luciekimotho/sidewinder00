@@ -33,9 +33,10 @@ SIMPLE_THREAD(testThread, NONE) {
 	ST_INIT
 	ST_START
 	sleep(1);
-	printf("Thread1\n");
 	flag = 1;
-	ST_END
+	printf("testThread flag reset\n");
+	ST_LOOPOVER
+	ST_TERMINATOR
 }
 
 SIMPLE_THREAD(testThread2, int ciao; int test;) {
@@ -45,19 +46,20 @@ SIMPLE_THREAD(testThread2, int ciao; int test;) {
 	local->ciao = 0;
 	local->test = 0;
 	ST_START
-	printf("Thread 2 after initialization\n");
+	printf("testThread2 number %d after initialization\n", ST_GETTHREADNUMBER);
 	printf("Got here %d times!\n", counter++);
 	ST_WAITFOR(flag == 1)
 	printf("Condition met, %d!\n", local->test++);
 	flag = 0;
 	ST_YIELD
 	printf("Thread 2 after yielding\n");
-	ST_END
+	ST_LOOPOVER
+	ST_TERMINATOR
 }
 
 int main(int argc, char** argv) {
 
-	printf("Configuring the thread\n");
+	printf("Configuring the threads\n");
 	ADD_NEW_THREAD(testThread)
 	ADD_NEW_THREAD(testThread2)
 	ADD_NEW_THREAD(testThread2)
