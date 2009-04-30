@@ -33,31 +33,46 @@ struct ThreadInfo {
 	void (*threadFunction)(struct SimpleThread*);
 };
 
-struct ThreadInfo threads[MAX_THREADS];
+struct ThreadInfo threadSlots[MAX_THREADS];
 uint8_t threadNumber = 0;
 uint8_t currentThread = 0;
 
 void setupDataStructures() {
 	uint8_t i;
 	for (i = 0; i < MAX_THREADS; i++) {
-		threads[i].threadFunction = 0;
+		threadSlots[i].threadFunction = 0;
 	}
 }
 
 void removeThread(uint8_t threadNumber) {
 	if (threadNumber < MAX_THREADS) {
-		threads[threadNumber].threadFunction = 0;
+		threadSlots[threadNumber].threadFunction = 0;
 	}
 }
 
-int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer) {
+int getThreadSlot() {
+	int i;
+	for (i = 0; i < MAX_THREADS; i++) {
+		if (threadSlots[i].threadFunction == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+uint8_t addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer) {
 	if (threadNumber < MAX_THREADS) {
-		threads[threadNumber].simpleThread.currentPosition = 0;
-		threads[threadNumber].simpleThread.threadNumber = threadNumber;
-		threads[threadNumber].threadFunction = threadFunction;
-		threads[threadNumber].simpleThread.localVariables = localVarPointer;
-		threadNumber++;
-		return 0;
+		int freeThreadSlot = getThreadSlot();
+		if (freeThreadSlot > -1 && freeThreadSlot < MAX_THREADS) {
+			threadSlots[threadNumber].simpleThread.currentPosition = 0;
+			threadSlots[threadNumber].simpleThread.threadNumber = threadNumber;
+			threadSlots[threadNumber].threadFunction = threadFunction;
+			threadSlots[threadNumber].simpleThread.localVariables = localVarPointer;
+			threadNumber++;
+			return 0;
+		} else {
+			return -1;
+		}
 	} else {
 		return -1;
 	}
@@ -68,8 +83,8 @@ void executeThreads() {
 		if (currentThread == threadNumber) {
 			currentThread = 0;
 		}
-		if (threads[currentThread].threadFunction != 0) {
-			threads[currentThread].threadFunction(&(threads[currentThread].simpleThread));
+		if (threadSlots[currentThread].threadFunction != 0) {
+			threadSlots[currentThread].threadFunction(&(threadSlots[currentThread].simpleThread));
 		}
 		currentThread++;
 	}

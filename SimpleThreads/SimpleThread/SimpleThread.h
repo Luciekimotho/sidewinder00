@@ -35,7 +35,7 @@
 
 #define PASTE_EXPANDED(A, B) A ## B
 
-#define ADD_NEW_THREAD(THREAD_NAME)		struct THREAD_NAME ## _local PASTE(local, __LINE__); \
+#define ADD_NEW_THREAD(THREAD_NAME)		static struct THREAD_NAME ## _local PASTE(local, __LINE__); \
 										addNewThread(THREAD_NAME, & PASTE(local, __LINE__)); \
 
 #define NONE uint8_t hiddenVar;
@@ -81,8 +81,9 @@ struct SimpleThread {
 	void *localVariables;
 };
 
-int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer);
+uint8_t addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer);
 void executeThreads();
 void removeThread(uint8_t threadNumber);
+void setupDataStructures();
 
 #endif /* SIMPLETHREAD_H_ */

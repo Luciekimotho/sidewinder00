@@ -29,12 +29,16 @@
 
 uint8_t flag = 0;
 
-SIMPLE_THREAD(testThread, NONE) {
+SIMPLE_THREAD(testThread, int counter;) {
+	ST_GETLOCAL(testThread)
 	ST_INIT
+	local->counter = 0;
+	printf("Initializing testThread number %d\n", ST_GETTHREADNUMBER);
+	printf("Starting reset counter value: %d\n", local->counter);
 	ST_START
 	sleep(1);
 	flag = 1;
-	printf("testThread flag reset\n");
+	printf("testThread number %d flag reset %d times\n", ST_GETTHREADNUMBER, local->counter++);
 	ST_LOOPOVER
 	ST_TERMINATOR
 }
@@ -57,12 +61,23 @@ SIMPLE_THREAD(testThread2, int ciao; int test;) {
 	ST_TERMINATOR
 }
 
+SIMPLE_THREAD(testThread3, NONE) {
+	ST_INIT
+	ST_START
+	printf("Creating a new thread from another one\n");
+	ADD_NEW_THREAD(testThread)
+	ST_END
+	ST_TERMINATOR
+}
+
 int main(int argc, char** argv) {
 
+	setupDataStructures();
 	printf("Configuring the threads\n");
 	ADD_NEW_THREAD(testThread)
 	ADD_NEW_THREAD(testThread2)
 	ADD_NEW_THREAD(testThread2)
+	ADD_NEW_THREAD(testThread3)
 	executeThreads();
 
 	return 0;
