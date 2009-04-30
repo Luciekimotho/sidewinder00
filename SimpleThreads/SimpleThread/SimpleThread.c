@@ -37,10 +37,11 @@ struct ThreadInfo threads[MAX_THREADS];
 uint8_t threadNumber = 0;
 uint8_t currentThread = 0;
 
-int addNewThread(void (*threadFunction)(struct SimpleThread*)) {
+int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer) {
 	if (threadNumber < MAX_THREADS) {
 		threads[threadNumber].simpleThread.currentPosition = 0;
 		threads[threadNumber].threadFunction = threadFunction;
+		threads[threadNumber].simpleThread.localVariables = localVarPointer;
 		threadNumber++;
 		return 0;
 	} else {

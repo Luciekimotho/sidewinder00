@@ -29,7 +29,7 @@
 
 uint8_t flag = 0;
 
-SIMPLE_THREAD(testThread) {
+SIMPLE_THREAD(testThread, NONE) {
 	ST_START
 	sleep(1);
 	printf("Thread1\n");
@@ -37,8 +37,8 @@ SIMPLE_THREAD(testThread) {
 	ST_END
 }
 
-SIMPLE_THREAD(testThread2) {
-	static uint8_t counter = 0;
+SIMPLE_THREAD(testThread2, NONE) {
+	static int counter = 0;
 	ST_START
 	printf("Thread 2 after initialization\n");
 	printf("Got here %d times!\n", counter++);
@@ -53,9 +53,10 @@ SIMPLE_THREAD(testThread2) {
 int main(int argc, char** argv) {
 
 	printf("Configuring the thread\n");
-	addNewThread(testThread);
-	addNewThread(testThread2);
-	addNewThread(testThread2);
+	//addNewThread(testThread);
+	ADD_NEW_THREAD(testThread)
+	//addNewThread(testThread2);
+	//addNewThread(testThread2);
 	executeThreads();
 
 	return 0;

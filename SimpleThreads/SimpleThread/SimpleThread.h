@@ -31,7 +31,21 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define SIMPLE_THREAD(THREAD_NAME)	void THREAD_NAME(struct SimpleThread* st)
+#define PASTE(A, B) PASTE_EXPANDED(A, B)
+
+#define PASTE_EXPANDED(A, B) A ## B
+
+#define ADD_NEW_THREAD(THREAD_NAME)		struct THREAD_NAME ## _local PASTE(local, __LINE__); \
+										addNewThread(THREAD_NAME, & PASTE(local, __LINE__)); \
+
+#define NONE uint8_t only;
+
+#define SIMPLE_THREAD(THREAD_NAME, LOCAL_VARIABLES)		struct THREAD_NAME ## _local { \
+															LOCAL_VARIABLES \
+														}; \
+														void THREAD_NAME(struct SimpleThread* st)
+
+#define ST_GETLOCAL(THREAD_NAME)			THREAD_NAME ## _local *local = (THREAD_NAME ## _local *)st->localVariables;
 
 #define ST_START 				switch(st->currentPosition) { \
 									case 0:
@@ -54,9 +68,10 @@
 
 struct SimpleThread {
 	uint8_t currentPosition;
+	void *localVariables;
 };
 
-int addNewThread(void (*threadFunction)(struct SimpleThread*));
+int addNewThread(void (*threadFunction)(struct SimpleThread*), void *localVarPointer);
 void executeThreads();
 
 #endif /* SIMPLETHREAD_H_ */
