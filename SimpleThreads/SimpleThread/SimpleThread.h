@@ -45,24 +45,29 @@
 														}; \
 														void THREAD_NAME(struct SimpleThread* st)
 
-#define ST_GETLOCAL(THREAD_NAME)			THREAD_NAME ## _local *local = (THREAD_NAME ## _local *)st->localVariables;
+#define ST_GETLOCAL(THREAD_NAME)			struct THREAD_NAME ## _local *local = (struct THREAD_NAME ## _local *)st->localVariables;
 
-#define ST_START 				switch(st->currentPosition) { \
+
+#define ST_INIT					switch(st->currentPosition) { \
 									case 0:
 
-#define ST_WAITFOR(CONDITION) 		st->currentPosition = __LINE__; \
-								case __LINE__: \
-									if (!(CONDITION)) { \
+#define ST_START						st->currentPosition = 1; \
 										break; \
-									}
+									case 1:
 
-#define ST_YIELD					st->currentPosition = __LINE__; \
-									break; \
-								case __LINE__: \
+#define ST_WAITFOR(CONDITION) 			st->currentPosition = __LINE__; \
+									case __LINE__: \
+										if (!(CONDITION)) { \
+											break; \
+										}
 
-#define ST_END 						st->currentPosition = 0; \
-									break; \
-								};
+#define ST_YIELD						st->currentPosition = __LINE__; \
+										break; \
+									case __LINE__: \
+
+#define ST_END 							st->currentPosition = 1; \
+										break; \
+									};
 
 #define ST_WAIT_UNTIL(condition) if (condition);
 
