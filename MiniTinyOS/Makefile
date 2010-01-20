@@ -1,0 +1,3 @@
+COMPONENT=DistanceBasedAppC
+include $(MAKERULES)
+
