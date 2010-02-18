@@ -1,6 +1,6 @@
 %% Author: root
 %% Created: Feb 10, 2010
-%% Description: it crates initial statically predefined servers topology and attach to them a few clients
+%% Description: it creates initial statically predefined servers topology and attach to them a few clients
 -module(topology).
 
 %%
@@ -10,7 +10,7 @@
 %%
 %% Exported Functions
 %%
--export([start/0,stop/0,startTopology/0,stopTopology/0]).
+-export([start/0,stop/0,stopTopology/0]).
 
 %%
 %% API Functions
@@ -66,7 +66,7 @@ stop() ->
 %% (   |-s2-)|--(--s4  )---------------------------------(-c3  )
 %% 			 |-------------------------(-c1  )
 
-%% We may call startTopology directly if we called before stopTopology and we not closed nodes
+%% We cannot call this directly because Node would be the same and spawn/3 would need be changed to spawn/4 in order to start process on foreign nodes
 startTopology() -> 
 	Node=node(),
 	%% Startup time is different among nodes so doesn't use messages to set topology (the destination couldn't be start yet even if source run command come before destination one)
@@ -96,6 +96,7 @@ startTopology() ->
 			ok
 	end.
 
+%% We can call this directly if we don't want to close terminal nodes
 stopTopology() -> 
 	{s1,node1@ubuntu904desktop}!{self(),node(),stop,""},
 	{s2,node1@ubuntu904desktop}!{self(),node(),stop,""},
