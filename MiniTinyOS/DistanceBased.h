@@ -13,6 +13,7 @@ typedef nx_struct MyMsg
     nx_uint8_t sequence_number;
     nx_uint8_t pos_x;
     nx_uint8_t pos_y;
+    nx_uint8_t hop_id;
 } MyMsg;
 
 #endif

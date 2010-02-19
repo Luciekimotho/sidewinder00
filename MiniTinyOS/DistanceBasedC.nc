@@ -39,7 +39,7 @@ implementation
     bool S2=FALSE;
     message_t pkt;
     MyMsg* toResend;
-    /*message_t pktToSend;*/
+    message_t pktToSend;
 
     event void Boot.booted() 
     {
@@ -79,6 +79,7 @@ implementation
 	    msg->sequence_number = 1;
 	    msg->pos_x = pos_x;
 	    msg->pos_y = pos_y;
+	    msg->hop_id = TOS_NODE_ID;
 	    if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MyMsg))==SUCCESS)
 	    //Si inizializza la variabile in modo da evitare di fare altri invii TODO Da levare poi perchè se ne fanno diversi
 		forwarded=TRUE;
@@ -87,17 +88,19 @@ implementation
 
     event void Timer1.fired() 
     {
-	/*//TODO Aggiungi copia buffer o blocco e farlo come Task
+	//TODO Aggiungi copia buffer o blocco e farlo come Task
 	MyMsg* msg = (MyMsg*)(call Packet.getPayload(&pktToSend, sizeof(MyMsg)));
-	dbg("default","%s:\tInoltra msg e aspetta fino alla ine dell'invio\n",sim_time_string());
+	dbg("default","E' scaduta l'attesa random del numero di slot, quindi inoltro il messaggio e attendo la fine della trasmissione!\n");
 	if (msg == NULL) 
 	    return;
-	msg->source_id = toSend->source_id;
-	msg->sequence_number = toSend->sequence_number;
-	msg->pos_x = toSend->pos_x;
-	msg->pos_y = toSend->pos_y;
+	//Copia le informazioni riguardanti il mittente del messaggio e il sequence number mentre modifica l'informazione sull'ultimo hop che ha inoltrato il messaggio e la sua posizione
+	msg->source_id = toResend->source_id;
+	msg->sequence_number = toResend->sequence_number;
+	msg->pos_x = pos_x;
+	msg->pos_y = pos_y;
+	msg->hop_id = TOS_NODE_ID;
 	if (call AMSend.send(AM_BROADCAST_ADDR, &pktToSend, sizeof(MyMsg))==SUCCESS)
-	    forwarded=TRUE;*/
+	    S2=FALSE;
     }
 
     event void AMControl.stopDone(error_t err) {}
@@ -109,6 +112,7 @@ implementation
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
+	dbg("default","Ricevuto messaggio!\n");
 	if (len == sizeof(MyMsg)) 
 	{
 	    //Si preleva il messaggio ricevuto e se ne tiene una copia per l'eventuale rinvio in S2
@@ -123,7 +127,7 @@ implementation
 		//Inizializzo la variabile dmin al valore appena calcolato per la distanza (essendo la prima volta che ricevo questo messaggio) e mi salvo il suo sequence number come ultimo messaggio ricevuto
 		dmin=distanza;
 		last=msg->sequence_number;
-		dbg("default","La mia posizione è (%d,%d), ho ricevuto il messaggio da %d che ha posizione (%d,%d) (distanza %f)\n",pos_x,pos_y,msg->source_id,msg->pos_x,msg->pos_y,distanza);
+		dbg("default","S1 -> La mia posizione è (%d,%d), ho ricevuto il messaggio da %d che ha posizione (%d,%d) (distanza %f) e mittente %d\n",pos_x,pos_y,msg->hop_id,msg->pos_x,msg->pos_y,distanza,msg->source_id);
 		//Se la distanza minima non soddisfa le richieste passo alla fase S5 per non inoltrare il messaggio msg (non coprirei molta area in più)
 		if (dmin<D)
 		    dbg("default","Non rispetta il limite, passo a S5\n");
@@ -135,31 +139,32 @@ implementation
 		    //Ottengo un numero random di slot (di durata TIMER_PERIOD) per l'attesa di eventuali messaggi da altri nodi con distanza minore
 		    n_slot=((uint8_t)(call Random.rand16()))%20+10;
 		    dbg("default","Attesa di %d slot\n",n_slot);
-		    call Timer1.startPeriodic(n_slot*TIMER_PERIOD);
+		    call Timer1.startOneShot(n_slot*TIMER_PERIOD);
 		}
 	    }
-	    /*else if ((msg->sequence_number==last) && (S2==TRUE))
+	    else if ((msg->sequence_number==last) && (S2==TRUE))
 	    {
+		//Ho ricevuto ancora lo stesso messaggio e sono nella fase S2 quindi interrompo l'attesa e passo alla fase S4
 		float distanza=0;
 		uint8_t n_slot=0;
-		dbg("default","Se ero in S2 allora passo in S4\n");
+		call Timer1.stop();
+		//Calcolo la nuova distanza di ricezione e verifico se è minore di quella minima ricevuta
 		distanza=sqrt(((float)pos_x-(float)msg->pos_x)*((float)pos_x-(float)msg->pos_x)+((float)pos_y-(float)msg->pos_y)*((float)pos_y-(float)msg->pos_y));
-		dbg("default","Mia osizione: (%d,%d)\tRicevuto da: %d\tCon posizione: (%d,%d)\tNuova distanza: %f\n",pos_x,pos_y,msg->source_id,msg->pos_x,msg->pos_y,distanza);
+		dbg("default","S2 -> La mia posizione è (%d,%d), ho ricevuto il messaggio da %d che ha posizione (%d,%d) (distanza %f) e mittente %d\n",pos_x,pos_y,msg->hop_id,msg->pos_x,msg->pos_y,distanza,msg->source_id);
 		if (distanza<dmin)
 		{
+		    //Qui la distanza dal mittente è minore e quindi la aggiorno e verifico se rispetta ancora il limite definito (D)
 		    dmin=distanza;
+		    dbg("default","Aggiornata distanza: %f\n",dmin);
 		    if (dmin<D)
 			dbg("default","Non rispetta il limite, passo a S5\n");
 		}
 		else
 		{
-		    //Passo a S2
-		    S2=TRUE;
-		    n_slot=((uint8_t)(call Random.rand16()))%20+10;
-		    dbg("default","Attesa <- %d\n",n_slot);
-		    call Timer1.startPeriodic(n_slot*TIMER_PERIOD);
+		    //Ritorno in attesa su S2
+		    call Timer1.startOneShot(n_slot*TIMER_PERIOD);
 		}
-	    }*/
+	    }
 	}
 	return msg;
     }
