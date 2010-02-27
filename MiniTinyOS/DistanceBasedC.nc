@@ -1,17 +1,3 @@
-/**
- * Implementation of the DistanceBased application.  A counter is
- * incremented and a radio message is sent whenever a timer fires.
- * Whenever a radio message is received, the three least significant
- * bits of the counter in the message payload are displayed on the
- * LEDs.  Program two motes with this application.  As long as they
- * are both within range of each other, the LEDs on both will keep
- * changing.  If the LEDs on one (or both) of the nodes stops changing
- * and hold steady, then that node is no longer receiving any messages
- * from the other node.
- *
- * @author Prabal Dutta
- * @date   Feb 1, 2006
- */
 
 #include "DistanceBased.h"
 
@@ -21,11 +7,13 @@ module DistanceBasedC
     uses interface SplitControl as AMControl;
     uses interface Timer<TMilli> as Timer0;
     uses interface Timer<TMilli> as Timer1;
+    uses interface Timer<TMilli> as Timer2;
     uses interface Packet;
     uses interface AMPacket;
     uses interface AMSend;
     uses interface Receive;
     uses interface Random;
+    uses interface PacketAcknowledgements;
 }
 
 implementation 
@@ -33,6 +21,8 @@ implementation
     uint8_t pos_x=0;
     uint8_t pos_y=0;
     uint8_t last=0;
+    uint8_t inviati=0;
+    uint8_t raggiunti=0;
     float dmin=0;
     float D=2.5;
     bool forwarded=FALSE;
@@ -60,6 +50,8 @@ implementation
 	    {
 		call Timer0.startPeriodic(TIMER_PERIOD);
 	    }
+	    //Viene avviato il timer per la stampa a video periodica delle prestazioni del protocollo
+	    call Timer2.startPeriodic(PERFORMANCE_PERIOD);
 	}
 	else 
 	{
@@ -81,8 +73,11 @@ implementation
 	    msg->pos_y = pos_y;
 	    msg->hop_id = TOS_NODE_ID;
 	    if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MyMsg))==SUCCESS)
-	    //Si inizializza la variabile in modo da evitare di fare altri invii TODO Da levare poi perchè se ne fanno diversi
+	    {
+		//Si inizializza la variabile in modo da evitare di fare altri invii TODO Da levare poi perchè se ne fanno diversi
 		forwarded=TRUE;
+		inviati++;
+	    }
 	}
     }
 
@@ -100,23 +95,41 @@ implementation
 	msg->pos_y = pos_y;
 	msg->hop_id = TOS_NODE_ID;
 	if (call AMSend.send(AM_BROADCAST_ADDR, &pktToSend, sizeof(MyMsg))==SUCCESS)
+	{
 	    S2=FALSE;
+	    inviati++;
+	}
+    }
+
+    event void Timer2.fired() 
+    {
+	//Stampo a video periodicamente il numero di messaggi inviati e ricevuti dal nodo per valutarne le performance
+	dbg("default","Nodo %d ha inviato %d messaggi e ha raggiunto %d nodi (%f %)!\n",TOS_NODE_ID,inviati,raggiunti, (float)raggiunti*100/10);
+	inviati=0;
+	raggiunti=0;
     }
 
     event void AMControl.stopDone(error_t err) {}
 
     event void AMSend.sendDone(message_t* msg, error_t err) 
     {
-	dbg("default","Nodo %d ha inviato un messaggio!\n",TOS_NODE_ID);
+	//dbg("default","Nodo %d ha inviato un messaggio!\n",TOS_NODE_ID);
     }
 
-    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
+    event message_t* Receive.receive(message_t* msg_gen, void* payload, uint8_t len)
     {
-	dbg("default","Ricevuto messaggio!\n");
 	if (len == sizeof(MyMsg)) 
 	{
 	    //Si preleva il messaggio ricevuto e se ne tiene una copia per l'eventuale rinvio in S2
 	    MyMsg* msg = (MyMsg*)payload;
+	    //Mando il messaggio di ACK a chi le lo ha mandato per misurare le performance
+	    MyAck* ack = (MyAck*)(call Packet.getPayload(&pkt, sizeof(MyAck)));
+	    if (ack == NULL) 
+		return msg_gen;
+	    ack->mittente=msg->hop_id;
+	    ack->sequence_number = msg->sequence_number;
+	    ack->nodo_raggiunto = TOS_NODE_ID;
+	    call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MyAck))==SUCCESS;
 	    toResend=msg;
 	    if (msg->sequence_number>last)
 	    {
@@ -166,6 +179,15 @@ implementation
 		}
 	    }
 	}
-	return msg;
+	else if (len == sizeof(MyAck)) 
+	{
+	    MyAck* ack = (MyAck*)payload;
+	    if (ack->mittente==TOS_NODE_ID)
+	    {
+		dbg("default","Ricevuto ACK da %d\n",ack->nodo_raggiunto);
+		raggiunti++;
+	    }
+	}
+	return msg_gen;
     }
 }
