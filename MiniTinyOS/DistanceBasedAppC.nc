@@ -12,6 +12,7 @@ implementation
     components new AMSenderC(AM_DISTANCEBASED);
     components new AMReceiverC(AM_DISTANCEBASED);
     components RandomC;
+    components TossimActiveMessageC;
     App.Boot -> MainC;
     App.AMControl -> ActiveMessageC;
     App.Timer0 -> Timer0;
@@ -22,4 +23,5 @@ implementation
     App.AMSend -> AMSenderC;
     App.Receive -> AMReceiverC;
     App.Random -> RandomC;
+    App.TossimPacket -> TossimActiveMessageC;
 }

@@ -13,15 +13,13 @@ typedef nx_struct MyMsg
 {
     nx_uint8_t source_id;
     nx_uint8_t sequence_number;
-    nx_uint8_t pos_x;
-    nx_uint8_t pos_y;
     nx_uint8_t hop_id;
 } MyMsg;
 
 typedef nx_struct MyAck
 {
     nx_uint8_t mittente;
-    nx_uint8_t sequence_number;
+    //TODO VEDI SE TENERLO nx_uint8_t sequence_number;
     nx_uint8_t nodo_raggiunto;
 } MyAck;
 

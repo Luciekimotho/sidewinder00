@@ -13,13 +13,11 @@ module DistanceBasedC
     uses interface AMSend;
     uses interface Receive;
     uses interface Random;
-    uses interface PacketAcknowledgements;
+    uses interface TossimPacket;
 }
 
 implementation 
 {
-    uint8_t pos_x=0;
-    uint8_t pos_y=0;
     uint8_t last=0;
     uint8_t inviati=0;
     uint8_t raggiunti=0;
@@ -41,10 +39,6 @@ implementation
     {
 	if (err == SUCCESS) 
 	{
-	    //Calcolo delle posizioni x,y dei nodi TODO sarà poi da fare in base a quelle effettive
-	    pos_x=(call Random.rand16()) % 10+1;
-	    pos_y=(call Random.rand16()) % 10+1;
-	    dbg("default","Posizione nodo %d: (%d,%d)\n",TOS_NODE_ID,pos_x,pos_y);
 	    //TODO Solo il nodo 0 per ora invia i messaggi ma poi lo devono fare tutti
 	    if (TOS_NODE_ID==0)
 	    {
@@ -69,8 +63,6 @@ implementation
 	    //Inviamo il messaggio msg con il nodo del mittente, il sequence number del messaggio e la posizione del nodo (necessaria per il calcolo della distanza tra mittente e destinatario)
 	    msg->source_id = TOS_NODE_ID;
 	    msg->sequence_number = 1;
-	    msg->pos_x = pos_x;
-	    msg->pos_y = pos_y;
 	    msg->hop_id = TOS_NODE_ID;
 	    if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MyMsg))==SUCCESS)
 	    {
@@ -91,8 +83,6 @@ implementation
 	//Copia le informazioni riguardanti il mittente del messaggio e il sequence number mentre modifica l'informazione sull'ultimo hop che ha inoltrato il messaggio e la sua posizione
 	msg->source_id = toResend->source_id;
 	msg->sequence_number = toResend->sequence_number;
-	msg->pos_x = pos_x;
-	msg->pos_y = pos_y;
 	msg->hop_id = TOS_NODE_ID;
 	if (call AMSend.send(AM_BROADCAST_ADDR, &pktToSend, sizeof(MyMsg))==SUCCESS)
 	{
@@ -113,13 +103,19 @@ implementation
 
     event void AMSend.sendDone(message_t* msg, error_t err) 
     {
-	//dbg("default","Nodo %d ha inviato un messaggio!\n",TOS_NODE_ID);
+	dbg("default","Nodo %d ha inviato un messaggio!\n",TOS_NODE_ID);
     }
 
     event message_t* Receive.receive(message_t* msg_gen, void* payload, uint8_t len)
     {
 	if (len == sizeof(MyMsg)) 
 	{
+	    //Definisco "a" con il valore per l'RSSI a distanza di 1 metro (preso dal file TopoConfig)
+	    uint8_t a=55.4;
+	    //Definisco "n" come la costante di propagazione del canale (preso dal file TopoConfig)
+	    uint8_t n=4.7;
+	    //Ottengo il valore dell'RSSI dal messaggio ricevuto
+	    int8_t rssi=call TossimPacket.strength(msg_gen);
 	    //Si preleva il messaggio ricevuto e se ne tiene una copia per l'eventuale rinvio in S2
 	    MyMsg* msg = (MyMsg*)payload;
 	    //Mando il messaggio di ACK a chi le lo ha mandato per misurare le performance
@@ -127,7 +123,7 @@ implementation
 	    if (ack == NULL) 
 		return msg_gen;
 	    ack->mittente=msg->hop_id;
-	    ack->sequence_number = msg->sequence_number;
+	    //TODO VEDI SE TENERLO ack->sequence_number = msg->sequence_number;
 	    ack->nodo_raggiunto = TOS_NODE_ID;
 	    call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MyAck))==SUCCESS;
 	    toResend=msg;
@@ -135,16 +131,22 @@ implementation
 	    {
 		//Il messaggio ha sequence number diverso dall'ultimo ricevuto quindi sono nella fase S1
 		uint8_t n_slot=0;
-		//Calcolo la distanza tra mittente e destinatario
-		float distanza=sqrt(((float)pos_x-(float)msg->pos_x)*((float)pos_x-(float)msg->pos_x)+((float)pos_y-(float)msg->pos_y)*((float)pos_y-(float)msg->pos_y));
+		//Calcolo la distanza utilizzando la formula : rssi=-(log10(distanza)*10*n+a)
+		float distanza=pow(10,(float)(-a-rssi)/(10*n));
 		//Inizializzo la variabile dmin al valore appena calcolato per la distanza (essendo la prima volta che ricevo questo messaggio) e mi salvo il suo sequence number come ultimo messaggio ricevuto
 		dmin=distanza;
 		last=msg->sequence_number;
-		dbg("default","S1 -> La mia posizione è (%d,%d), ho ricevuto il messaggio da %d che ha posizione (%d,%d) (distanza %f) e mittente %d\n",pos_x,pos_y,msg->hop_id,msg->pos_x,msg->pos_y,distanza,msg->source_id);
+		dbg("default","S1 -> Ho ricevuto il messaggio da %d e mittente %d con RSSI %d ottenendo una stima della distanza di %f\n",msg->hop_id,msg->source_id,rssi,distanza);
 		//Se la distanza minima non soddisfa le richieste passo alla fase S5 per non inoltrare il messaggio msg (non coprirei molta area in più)
 		if (dmin<D)
+		{
 		    dbg("default","Non rispetta il limite, passo a S5\n");
-		    //TODO Interrompi trasmissione se in S2 e non inoltrare msg
+		    //Interrompo la trasmissione se sono nella fase S2 e non inoltraro il messaggio msg
+		    call Timer1.stop();
+		    if (S2==TRUE)
+			call AMSend.cancel(msg_gen);
+		    
+		}
 		else
 		{
 		    //Se sono arrivato qui allora il messaggio è arrivato per la prima volta da una sorgente che ha una distanza superiore a quella minima e quindi posso passare alla fase S2 (quindi inizializzo a TRUE la rispettiva variabile booleana) per tentare una ritrasmissione del messaggio msg
@@ -162,8 +164,8 @@ implementation
 		uint8_t n_slot=0;
 		call Timer1.stop();
 		//Calcolo la nuova distanza di ricezione e verifico se è minore di quella minima ricevuta
-		distanza=sqrt(((float)pos_x-(float)msg->pos_x)*((float)pos_x-(float)msg->pos_x)+((float)pos_y-(float)msg->pos_y)*((float)pos_y-(float)msg->pos_y));
-		dbg("default","S2 -> La mia posizione è (%d,%d), ho ricevuto il messaggio da %d che ha posizione (%d,%d) (distanza %f) e mittente %d\n",pos_x,pos_y,msg->hop_id,msg->pos_x,msg->pos_y,distanza,msg->source_id);
+		distanza=pow(10,(float)(-a-rssi)/(10*n));
+		dbg("default","S2 -> Ho ricevuto il messaggio da %d e mittente %d con RSSI %d ottenendo una stima della distanza di %f\n",msg->hop_id,msg->source_id,rssi,distanza);
 		if (distanza<dmin)
 		{
 		    //Qui la distanza dal mittente è minore e quindi la aggiorno e verifico se rispetta ancora il limite definito (D)
@@ -171,6 +173,10 @@ implementation
 		    dbg("default","Aggiornata distanza: %f\n",dmin);
 		    if (dmin<D)
 			dbg("default","Non rispetta il limite, passo a S5\n");
+		    //Interrompo la trasmissione se sono nella fase S2 e non inoltraro il messaggio msg
+		    call Timer1.stop();
+		    if (S2==TRUE)
+			call AMSend.cancel(msg_gen);
 		}
 		else
 		{
