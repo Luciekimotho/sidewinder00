@@ -1,6 +1,10 @@
+
 #include "DistanceBased.h"
 
-configuration DistanceBasedAppC {}
+configuration DistanceBasedAppC 
+{
+}
+
 implementation 
 {
     components MainC;
@@ -9,6 +13,7 @@ implementation
     components new TimerMilliC() as Timer0;
     components new TimerMilliC() as Timer1;
     components new TimerMilliC() as Timer2;
+    components new TimerMilliC() as Timer3;
     components new AMSenderC(AM_DISTANCEBASED);
     components new AMReceiverC(AM_DISTANCEBASED);
     components RandomC;
@@ -18,6 +23,7 @@ implementation
     App.Timer0 -> Timer0;
     App.Timer1 -> Timer1;
     App.Timer2 -> Timer2;
+    App.Timer3 -> Timer3;
     App.Packet -> AMSenderC;
     App.AMPacket -> AMSenderC;
     App.AMSend -> AMSenderC;
