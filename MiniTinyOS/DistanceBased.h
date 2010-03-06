@@ -4,9 +4,10 @@
 
 enum 
 {
-    AM_DISTANCEBASED = 6,
-    TIMER_PERIOD = 100,
-    PERFORMANCE_PERIOD = 10000
+    AM_DISTANCEBASED = 1,
+    RESEND_PERIOD = 100,
+    SEND_PERIOD = 3000,
+    ACK_PERIOD = 10,
 };
 
 typedef nx_struct MyMsg
@@ -19,8 +20,13 @@ typedef nx_struct MyMsg
 typedef nx_struct MyAck
 {
     nx_uint8_t mittente;
-    //TODO VEDI SE TENERLO nx_uint8_t sequence_number;
     nx_uint8_t nodo_raggiunto;
 } MyAck;
+
+typedef struct Elemento
+{
+    nx_uint8_t nodo_raggiunto;
+    struct Elemento * next_elem;
+} Elemento;
 
 #endif
