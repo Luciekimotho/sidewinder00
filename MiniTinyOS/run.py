@@ -2,7 +2,7 @@
 
 N_MOTES = 10
 DBG_CHANNELS = "default error"
-SIM_TIME = 20
+SIM_TIME = 50
 TOPO_FILE = "linkgain.out"
 #NOISE_FILE = "/opt/tinyos-2.1.0/tos/lib/tossim/noise/TTX4-short.txt"
 NOISE_FILE = "/opt/tinyos-2.1.0/tos/lib/tossim/noise/meyer-heavy.txt"
@@ -16,10 +16,12 @@ t = Tossim([])
 r = t.radio()
 
 t.randomSeed(1)
-
 for channel in DBG_CHANNELS.split():
     t.addChannel(channel, sys.stdout)
 
+# AGGIUNTO LOGGING PERFORMANCE SU FILE Log.txt
+log = open("log.txt", "w")
+t.addChannel("log", log)
 
 #add gain links
 f = open(TOPO_FILE, "r")
