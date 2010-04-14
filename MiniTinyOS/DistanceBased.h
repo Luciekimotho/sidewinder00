@@ -6,8 +6,8 @@ enum
 {
     AM_DISTANCEBASED = 1,
     RESEND_PERIOD = 100,
-    SEND_PERIOD = 3000,
-    ACK_PERIOD = 10,
+    SEND_PERIOD = 500,
+    PERF_PERIOD = 5000,
 };
 
 typedef nx_struct MyMsg
@@ -17,16 +17,42 @@ typedef nx_struct MyMsg
     nx_uint8_t hop_id;
 } MyMsg;
 
-typedef nx_struct MyAck
+typedef struct Inibito
 {
-    nx_uint8_t mittente;
-    nx_uint8_t nodo_raggiunto;
-} MyAck;
+    nx_uint8_t sequence_number;
+    struct Inibito * next;
+} Inibito;
 
-typedef struct Elemento
+typedef struct DaInoltrare
 {
-    nx_uint8_t nodo_raggiunto;
-    struct Elemento * next_elem;
-} Elemento;
+    nx_struct MyMsg* msg;
+    nx_uint32_t when;
+    struct DaInoltrare * next;
+} DaInoltrare;
+
+typedef struct SeqRicevuta
+{
+    nx_uint8_t sequence_number;
+    bool S2;
+    struct SeqRicevuta * next;
+} SeqRicevuta;
+
+typedef struct Inviato
+{
+    nx_uint8_t sequence_number;
+    struct Inviato * next;
+} Inviato;
+
+typedef struct Inoltrato
+{
+    nx_struct MyMsg* msg;
+    struct Inoltrato * next;
+} Inoltrato;
+
+typedef struct Ricevuto
+{
+    nx_struct MyMsg* msg;
+    struct Ricevuto * next;
+} Ricevuto;
 
 #endif
