@@ -1,5 +1,10 @@
-
 #include "DistanceBased.h"
+
+#if 0
+#define n_slot 5
+#else
+#define n_slot ((uint8_t)(call Random.rand16()))%20+10
+#endif
 
 module DistanceBasedC 
 {
@@ -349,7 +354,7 @@ implementation
 	    if (!ricevuto && !inibito)
 	    {
 		//Il messaggio ha sequence number diverso dall'ultimo ricevuto quindi sono nella fase S1
-		uint8_t n_slot=0;
+		//uint8_t n_slot=0;
 		//Calcolo la distanza utilizzando la formula : rssi=-(log10(distanza)*10*n+a)
 		float distanza=pow(10,(float)(-a-rssi)/(10*n));
 		SeqRicevuta* nuovaSeqRicevuta=(SeqRicevuta*) malloc(sizeof(SeqRicevuta));
@@ -387,7 +392,7 @@ implementation
 			tmp3=tmp3->next;
 		    }
 		    //Ottengo un numero random di slot (di durata RESEND_PERIOD) per l'attesa di eventuali messaggi da altri nodi con distanza minore
-		    n_slot=((uint8_t)(call Random.rand16()))%20+10;
+		    //n_slot=((uint8_t)(call Random.rand16()))%20+10;
 		    //Si aggiunge il messaggio tra quelli che devono essere inoltrati
 		    nuovoDaInoltrare=(DaInoltrare*) malloc(sizeof(DaInoltrare));
 		    nuovoDaInoltrare->msg=(MyMsg*) malloc(sizeof(MyMsg));
