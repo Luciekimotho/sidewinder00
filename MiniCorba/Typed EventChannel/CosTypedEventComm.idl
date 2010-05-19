@@ -1,0 +1,10 @@
+//#include "CosEventComm.idl"
+#include "CosEventChannelAdmin.idl"
+
+module CosTypedEventComm 
+{
+    interface TypedPushConsumer : CosEventComm::PushConsumer 
+    {
+	Object get_typed_consumer();
+    };
+};

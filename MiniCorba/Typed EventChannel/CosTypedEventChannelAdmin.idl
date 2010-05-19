@@ -1,0 +1,30 @@
+//#include "CosEventChannelAdmin.idl"
+#include "CosTypedEventComm.idl"
+
+module CosTypedEventChannelAdmin 
+{
+    exception InterfaceNotSupported {};
+    
+    exception NoSuchImplementation {};
+    
+    typedef string Key;// Repository ID
+    
+    interface TypedProxyPushConsumer : CosEventChannelAdmin::ProxyPushConsumer,CosTypedEventComm::TypedPushConsumer {};
+
+    interface TypedSupplierAdmin : CosEventChannelAdmin::SupplierAdmin 
+    {
+	TypedProxyPushConsumer obtain_typed_push_consumer(in Key supported_interface) raises(InterfaceNotSupported);
+    };
+
+    interface TypedConsumerAdmin : CosEventChannelAdmin::ConsumerAdmin 
+    {
+	CosEventChannelAdmin::ProxyPushSupplier obtain_typed_push_supplier(in Key uses_interface) raises(NoSuchImplementation);
+    };
+
+    interface TypedEventChannel 
+    {
+	TypedConsumerAdmin for_consumers();
+	TypedSupplierAdmin for_suppliers();
+	void destroy ();
+    };
+};
