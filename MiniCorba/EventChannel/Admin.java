@@ -1,7 +1,5 @@
 import CosEventChannelAdmin.*;
 import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
-import org.omg.CosNaming.*;
 
 public class Admin 
 {
@@ -24,7 +22,18 @@ public class Admin
 	    System.out.println("1: Richiamare metodo for_consumers");
 	    System.out.println("2: Richiamare metodo for_suppliers");
 	    System.out.println("3: Richiamare metodo destroy");
-	    int scelta=Integer.parseInt(System.console().readLine());
+	    boolean valido=false;
+	    int scelta=0;
+	    while (!valido)
+		try
+		{
+		    scelta=Integer.parseInt(System.console().readLine());
+		    valido=true;
+		}
+		catch(Exception e)
+		{
+		    System.out.println("ATTENZIONE: Inserire un valore numerico!");
+		}
 	    while (scelta!=0)
 	    {
 		if (scelta==1)
@@ -52,7 +61,17 @@ public class Admin
 		System.out.println("1: Richiamare metodo for_consumers");
 		System.out.println("2: Richiamato metodo for_suppliers");
 		System.out.println("3: Richiamare metodo destroy");
-		scelta=Integer.parseInt(System.console().readLine());
+		valido=false;
+		while (!valido)
+		    try
+		    {
+			scelta=Integer.parseInt(System.console().readLine());
+			valido=true;
+		    }
+		    catch(Exception e)
+		    {
+			System.out.println("ATTENZIONE: Inserire un valore numerico!");
+		    }
 	    }
 	    System.out.println("Bye bye!");
 	} 

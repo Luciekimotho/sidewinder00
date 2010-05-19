@@ -3,8 +3,6 @@ import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.CosNaming.*;
 
-import java.util.*;
-
 public class EventChannelImpl extends EventChannelPOA
 {
     ORB orb=null;
@@ -66,7 +64,6 @@ public class EventChannelImpl extends EventChannelPOA
 		//Faccio il binding del riferimento al supplier nel naming
 		NameComponent path[] = ncRef.to_name("SupplierAdmin");
 		ncRef.bind(path, refSupplierAdmin);
-		return SupplierAdminHelper.narrow(refSupplierAdmin);
 	    } 
 	    catch(Exception e) 
 	    { 
