@@ -1,4 +1,3 @@
-import CosEventChannelAdmin.*;
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.CosNaming.*;
