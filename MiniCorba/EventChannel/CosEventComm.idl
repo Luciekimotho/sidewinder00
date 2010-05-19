@@ -1,0 +1,16 @@
+module CosEventComm 
+{
+    exception Disconnected{};
+
+    interface PushConsumer 
+    {
+	//void push (in any data) raises(Disconnected);
+	void push (in long data) raises(Disconnected);
+	void disconnect_push_consumer();
+    };
+    
+    interface PushSupplier 
+    {
+	void disconnect_push_supplier();
+    };
+};

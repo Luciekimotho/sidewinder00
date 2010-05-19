@@ -1,0 +1,10 @@
+module Type 
+{
+    exception Disconnected{};
+
+    interface I
+    {
+	void push (in string data) raises(Disconnected);
+	void disconnect_push_consumer();
+    };
+};
