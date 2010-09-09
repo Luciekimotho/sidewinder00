@@ -114,7 +114,6 @@ public class Communication {
 			pongSubscriber.close();
 			connection.close();
 		} catch (JMSException e) {
-			// TODO: Check
 			Misc.error("An unrecoverable error happened.", e);
 		}
 	}
@@ -179,8 +178,7 @@ public class Communication {
 						Bully.setInhibitElection(false);
 						Misc.writeLog("New coordinator is Client " + newCoordinator);
 					} else {
-						// TODO: check if this really makes sense or if we should start
-						// a new election instead
+						// We don't ever go in this section
 						Misc.writeLog("Setting Coordinator to 0!!!!!");
 						Bully.setCoordinator(0);
 					}
@@ -227,7 +225,6 @@ public class Communication {
 		@Override
 		public void onMessage(Message message) {
 			try {
-				// TODO: Misc.writeLog("PING received, replying with a PONG!");
 				// Creating and sending reply 
 				TextMessage pong = session.createTextMessage();
 				pong.setStringProperty(Misc.TYPE, Misc.PONG);

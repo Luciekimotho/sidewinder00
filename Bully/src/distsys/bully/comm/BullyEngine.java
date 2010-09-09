@@ -1,7 +1,6 @@
 package distsys.bully.comm;
 
 import javax.jms.JMSException;
-import javax.jms.MessageFormatException;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
@@ -16,9 +15,7 @@ import distsys.bully.misc.Misc;
 public class BullyEngine implements Runnable {
 
 	private volatile boolean running = false;
-	
-	private volatile boolean abort = false;
-	
+		
 	private TopicSession session;
 	private TopicPublisher publisher;
 	private TopicSubscriber pingSubscriber;
@@ -90,48 +87,8 @@ public class BullyEngine implements Runnable {
 	}
 	
 	/**
-	 * Starts the election procedure
-	 */
-	/*
-	public void startElection(TopicPublisher publisher) {
-		try {
-			// Send election request
-			TextMessage election = session.createTextMessage(Misc.ELECTION);
-			election.setStringProperty(Misc.TYPE, Misc.ELECTION);
-			election.setIntProperty(Misc.SOURCE, Bully.getClientID());
-			setAbort(false);
-			publisher.publish(election);
-			// Wait for replies
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				Misc.error("An unrecoverable error happened while waiting for abort messages.", e);
-			}
-			if (!isAbort()) {
-				// Nobody replied, I am the new coordinator
-				Misc.writeLog("Election won!");
-				// Send new coordinator ID
-				publisher.publish(coordinatorMessage);
-				// Set coordinator
-				Bully.setCoordinator(Bully.getClientID());
-				// Remove election inhibition
-				Bully.setInhibitElection(false);
-			} else {
-				// TODO: Election lost. Is there something to be done?
-				Misc.writeLog("Aborting election!");
-			}
-		} catch (MessageFormatException e) {
-			Misc.error("Required property not found in the received message.", e);
-		} catch (JMSException e) {
-			Misc.error("An unrecoverable error happened.", e);
-		}
-	}
-	/*
-	
-	/**
 	 * Sends a ping and waits for the PONG
 	 */
-	// TODO: change the name of this method
 	private void ping() {
 		synchronized(this) {
 			try {
@@ -151,22 +108,12 @@ public class BullyEngine implements Runnable {
 							// startElection(publisher);
 							new Thread(election).start();
 						}
-					} else {
-						//Misc.writeLog("Ping succeeded! (" + ping.getText() + ")");
 					}
 				}
 			} catch(JMSException e) {
 				Misc.error("An unrecoverable error happened.", e);
 			}
 		}
-	}
-	
-	public boolean isAbort() {
-		return abort;
-	}
-	
-	public void setAbort(boolean abort) {
-		this.abort = abort;
 	}
 	
 	public Election getElection() {
