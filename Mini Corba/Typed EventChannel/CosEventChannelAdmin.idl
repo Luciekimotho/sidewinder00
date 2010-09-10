@@ -1,0 +1,34 @@
+#include "CosEventComm.idl"
+
+module CosEventChannelAdmin 
+{
+    exception AlreadyConnected {};
+
+    exception TypeError {};
+
+    interface ProxyPushConsumer: CosEventComm::PushConsumer 
+    {
+	void connect_push_supplier(in CosEventComm::PushSupplier push_supplier)	raises(AlreadyConnected);
+    };
+    
+    interface ProxyPushSupplier: CosEventComm::PushSupplier 
+    {
+	void connect_push_consumer(in CosEventComm::PushConsumer push_consumer) raises(AlreadyConnected, TypeError);
+    };
+
+    interface ConsumerAdmin 
+    {
+	ProxyPushSupplier obtain_push_supplier();
+    };
+
+    interface SupplierAdmin 
+    {
+	ProxyPushConsumer obtain_push_consumer();
+    };
+    
+    //NOTE Spostato da CosTypedEventComm x eviare riferimenti ciclici
+    interface TypedPushConsumer : CosEventComm::PushConsumer 
+    {
+	Object get_typed_consumer();
+    };
+};

@@ -1,0 +1,9 @@
+#include "CosEventComm.idl"
+
+module CosTypedEventComm 
+{
+    interface TypedPushConsumer : CosEventComm::PushConsumer 
+    {
+	Object get_typed_consumer();
+    };
+};

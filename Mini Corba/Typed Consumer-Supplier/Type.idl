@@ -1,0 +1,10 @@
+#include "CosEventComm.idl"
+
+module Type 
+{
+    interface I
+    {
+	void push (in string data) raises(CosEventComm::Disconnected);
+	void disconnect_push_consumer();
+    };
+};
