@@ -25,11 +25,10 @@ module CosEventChannelAdmin
     {
 	ProxyPushConsumer obtain_push_consumer();
     };
-
-    interface EventChannel 
+    
+    //NOTE Spostato da CosTypedEventComm x eviare riferimenti ciclici
+    interface TypedPushConsumer : CosEventComm::PushConsumer 
     {
-	ConsumerAdmin for_consumers();
-	SupplierAdmin for_suppliers();
-	void destroy();
+	Object get_typed_consumer();
     };
 };

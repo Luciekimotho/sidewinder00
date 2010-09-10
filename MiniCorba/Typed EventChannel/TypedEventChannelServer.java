@@ -20,10 +20,10 @@ public class TypedEventChannelServer
 	    //Ottengo il root naming context
 	    org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 	    NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-	    //Faccio il binding del riferimento al supplier nel naming
+	    //Faccio il binding del riferimento al typed event channel nel naming
 	    NameComponent path[] = ncRef.to_name("TypedEventChannel");
 	    ncRef.bind(path, ref);
-	    //Attendo le invocazioni
+	    //Attendo le invocazioni da parte dell'admin
 	    System.out.println("Typed event channel server pronto e in attesa di chiamate...");
 	    orb.run();  
 	}

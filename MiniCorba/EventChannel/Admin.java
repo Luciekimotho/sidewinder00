@@ -9,7 +9,7 @@ public class Admin
 	{
 	    //Creo e inizializzo l'ORB
 	    ORB orb = ORB.init(args, null);
-	    //Ottengo il riferimento all'oggetto dal naming
+	    //Ottengo il riferimento dell'eventChannel dal naming
 	    org.omg.CORBA.Object objRef = orb.string_to_object("corbaname::localhost:1050#EventChannel");
 	    EventChannel eventChannel = EventChannelHelper.narrow(objRef);
 	    if (eventChannel==null)

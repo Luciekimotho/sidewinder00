@@ -7,17 +7,39 @@ import java.util.*;
 public class TypedSupplierAdminImpl extends TypedSupplierAdminPOA
 {
     ORB orb=null;
-    List<org.omg.CORBA.Object> listProxyPushConsumer=null;
+    List<org.omg.CORBA.Object> listAllProxyPushConsumer=null;
 
     public TypedSupplierAdminImpl(ORB orb)
     {
 	this.orb=orb;
-	listProxyPushConsumer=new ArrayList<org.omg.CORBA.Object>();
+	listAllProxyPushConsumer=new ArrayList<org.omg.CORBA.Object>();
     }
 
     public TypedProxyPushConsumer obtain_typed_push_consumer(String supported_interface) throws InterfaceNotSupported
     {
-	return null;
+	System.out.println("TypedSupplierAdminImpl:\tRichiamato metodo obtain_typed_push_consumer");
+	//Verifico se l'interfaccia è supportata, se non lo è lancio l'eccezzione
+	if (!supported_interface.equals("IString"))
+	    throw new InterfaceNotSupported();
+	//Creo il servant
+	TypedProxyPushConsumerImpl typedProxyPushConsumer = new TypedProxyPushConsumerImpl(orb);
+	org.omg.CORBA.Object ref=null;
+	try
+	{
+	    //Ottengo il riferimento al rootPOA e attivo il POAManager
+	    POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+	    rootPOA.the_POAManager().activate();
+	    //Attivo il servant associandolo al rootPOA e ottenendo il riferimento all'oggetto
+	    ref = rootPOA.servant_to_reference(typedProxyPushConsumer);
+	    //Aggiungo il riferimento al nuovo TypedProxyPushConsumer alla lista
+	    listAllProxyPushConsumer.add(ref);
+	} 
+	catch(Exception e) 
+	{ 
+	    System.out.println("TypedSupplierAdminImpl:\tATTENZIONE: Impossibile gestire la creazione di TypedProxyPushConsumer!\nMotivo: "+e.getCause());
+	    typedProxyPushConsumer=null;
+	}
+	return TypedProxyPushConsumerHelper.narrow(ref);
     }
 
     public ProxyPushConsumer obtain_push_consumer()
@@ -33,7 +55,8 @@ public class TypedSupplierAdminImpl extends TypedSupplierAdminPOA
 	    rootPOA.the_POAManager().activate();
 	    //Attivo il servant associandolo al rootPOA e ottenendo il riferimento all'oggetto
 	    ref = rootPOA.servant_to_reference(proxyPushConsumer);
-	    listProxyPushConsumer.add(ref);
+	    //Aggiungo il riferimento al nuovo ProxyPushConsumer alla lista
+	    listAllProxyPushConsumer.add(ref);
 	} 
 	catch(Exception e) 
 	{ 
@@ -43,7 +66,7 @@ public class TypedSupplierAdminImpl extends TypedSupplierAdminPOA
 	return ProxyPushConsumerHelper.narrow(ref);
     };
     
-    //TODO Aggiunto per distruggere tutti i proxy quando chiamo destroy sul event channel
+    //NOTE Aggiunto per distruggere tutti i proxy quando chiamo destroy sull'event channel
     public void destroy()
     {
 	System.out.println("TypedSupplierAdminImpl:\tRichiamato metodo destroy");
@@ -51,18 +74,21 @@ public class TypedSupplierAdminImpl extends TypedSupplierAdminPOA
 	{
 	    //Ottengo il riferimento al rootPOA e attivo il POAManager
 	    POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-	    rootPOA.the_POAManager().activate();    
-	    for (org.omg.CORBA.Object ref:listProxyPushConsumer)
+	    rootPOA.the_POAManager().activate();
+	    //Per ogni ProxyPushConsumer e TypedProxyPushConsumer creato dal TypedSupplierAdmin (e quindi presente nella lista) chiamo il metodo disconnect_push_consumer per disconnetterlo e successivamente lo disattivo nel rootPOA 
+	    for (org.omg.CORBA.Object ref:listAllProxyPushConsumer)
 	    {
+		//Casto anche i typed alla forma generica visto che tanto è utilizzato solo il metodo disconnect che è ereditato da quest'ultima
 		(ProxyPushConsumerHelper.narrow(ref)).disconnect_push_consumer();
 		byte[] id=rootPOA.reference_to_id(ref);
 		rootPOA.deactivate_object(id);
 	    }
-	    listProxyPushConsumer.clear();
+	    //Rimuovo tutti gli elementi dalla lista
+	    listAllProxyPushConsumer.clear();
 	}
 	catch(Exception e)
 	{
-	    System.out.println("TypedSupplierAdminImpl:\tATTENZIONE: Impossibile gestire la distruzione del consumer admin e di tutto ciò che è a lui collegato!\nMotivo: "+e.getCause());
+	    System.out.println("TypedConsumerAdminImpl:\tATTENZIONE: Impossibile gestire la distruzione del typed supplier admin e di tutto ciò che è a lui collegato!\nMotivo: "+e.getCause());
 	}
     }
 }

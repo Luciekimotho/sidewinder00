@@ -12,6 +12,7 @@ then
     javac Admin.java && 
     javac Client.java && 
     konsole --workdir "/home/stefan/Scrivania/Mini Corba/EventChannel" --title "ORB" --noclose -e orbd -ORBInitialPort 1050 && 
+    read -p "Premi per avviare il resto" && 
     konsole --workdir "/home/stefan/Scrivania/Mini Corba/EventChannel" --title "EventChannelServer" --noclose -e java EventChannelServer -ORBInitialPort 1050 -ORBInitialHost localhost && 
     konsole --workdir "/home/stefan/Scrivania/Mini Corba/EventChannel" --title "Admin" --noclose -e java Admin -ORBInitialPort 1050 -ORBInitialHost localhost && 
     konsole --workdir "/home/stefan/Scrivania/Mini Corba/EventChannel" --title "Client1" --noclose -e java Client -ORBInitialPort 1050 -ORBInitialHost localhost &&

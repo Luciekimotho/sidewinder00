@@ -4,8 +4,7 @@ module CosEventComm
 
     interface PushConsumer 
     {
-	//void push (in any data) raises(Disconnected);
-	void push (in long data) raises(Disconnected);
+	void push(in any data) raises(Disconnected);
 	void disconnect_push_consumer();
     };
     

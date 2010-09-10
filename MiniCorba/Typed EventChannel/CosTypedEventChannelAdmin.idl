@@ -1,15 +1,14 @@
-//#include "CosEventChannelAdmin.idl"
-#include "CosTypedEventComm.idl"
+#include "CosEventChannelAdmin.idl"
 
 module CosTypedEventChannelAdmin 
 {
     exception InterfaceNotSupported {};
-    
+
     exception NoSuchImplementation {};
-    
-    typedef string Key;// Repository ID
-    
-    interface TypedProxyPushConsumer : CosEventChannelAdmin::ProxyPushConsumer,CosTypedEventComm::TypedPushConsumer {};
+
+    typedef string Key;
+
+    interface TypedProxyPushConsumer : CosEventChannelAdmin::ProxyPushConsumer, CosEventChannelAdmin::TypedPushConsumer {};
 
     interface TypedSupplierAdmin : CosEventChannelAdmin::SupplierAdmin 
     {
