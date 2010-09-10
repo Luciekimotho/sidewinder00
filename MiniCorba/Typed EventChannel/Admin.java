@@ -1,7 +1,5 @@
 import CosTypedEventChannelAdmin.*;
 import org.omg.CORBA.*;
-/*import org.omg.PortableServer.*;
-import org.omg.CosNaming.*;*/
 
 public class Admin 
 {
@@ -11,12 +9,12 @@ public class Admin
 	{
 	    //Creo e inizializzo l'ORB
 	    ORB orb = ORB.init(args, null);
-	    //Ottengo il riferimento all'oggetto dal naming
+	    //Ottengo il riferimento del typedEventChannel dal naming
 	    org.omg.CORBA.Object objRef = orb.string_to_object("corbaname::localhost:1050#TypedEventChannel");
 	    TypedEventChannel typedEventChannel = TypedEventChannelHelper.narrow(objRef);
 	    if (typedEventChannel==null)
 	    {
-		System.out.println("Nessun TypedEventChannnel individuato!");
+		System.out.println("Admin:\tNessun TypedEventChannnel individuato!");
 		System.exit(-1);
 	    }
 	    System.out.println("Digita:");
@@ -34,7 +32,7 @@ public class Admin
 		}
 		catch(Exception e)
 		{
-		    System.out.println("ATTENZIONE: Inserire un valore numerico!");
+		    System.out.println("Admin:\tATTENZIONE: Inserire un valore numerico!");
 		}
 	    while (scelta!=0)
 	    {
@@ -55,7 +53,7 @@ public class Admin
 		    break;
 		}
 		else
-		    System.out.println("Scelta non valida!");
+		    System.out.println("Admin:\tScelta non valida!");
 		System.out.println("");
 		System.out.println("");
 		System.out.println("Digita:");
@@ -72,10 +70,10 @@ public class Admin
 		    }
 		    catch(Exception e)
 		    {
-			System.out.println("ATTENZIONE: Inserire un valore numerico!");
+			System.out.println("Admin:\tATTENZIONE: Inserire un valore numerico!");
 		    }
 	    }
-	    System.out.println("Bye bye!");
+	    System.out.println("Admin:\tBye bye!");
 	} 
 	catch (Exception e)
 	{ 

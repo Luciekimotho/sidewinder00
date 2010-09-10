@@ -12,6 +12,7 @@ public class Client
 	{
 	    //Creo e inizializzo l'ORB
 	    ORB orb = ORB.init(args, null);
+	    Any data=orb.create_any();
 	    ConsumerAdmin consumerAdmin=null;
 	    SupplierAdmin supplierAdmin=null;
 	    ProxyPushConsumer proxyPushConsumer=null;
@@ -21,14 +22,14 @@ public class Client
 	    System.out.println("Digita:");
 	    System.out.println("0: Uscire");	
 	    System.out.println("1: Ottenere ConsumerAdmin");
-	    System.out.println("2: Ottenere SupplierAdmin");
-	    System.out.println("3: Richiamare metodo obtain_push_supplier sul ConsumerAdmin");
-	    System.out.println("4: Richiamare metodo obtain_push_consumer sul SupplierAdmin");
-	    System.out.println("5: Richiamare metodo connect_push_supplier sul ProxyPushConsumer");
-	    System.out.println("6: Richiamare metodo push sul ProxyPushConsumer");
-	    System.out.println("7: Richiamare metodo disconnect_push_consumer sul ProxyPushConsumer");
-	    System.out.println("8: Richiamare metodo connect_push_consumer sul ProxyPushSupplier");
-	    System.out.println("9: Richiamare metodo disconnect_push_supplier sul ProxyPushSupplier");
+	    System.out.println("2:     	Richiamare metodo obtain_push_supplier sul ConsumerAdmin");
+	    System.out.println("3:         	Richiamare metodo connect_push_consumer sul ProxyPushSupplier");
+	    System.out.println("4:         		Richiamare metodo disconnect_push_consumer sul PushConsumer");
+	    System.out.println("5: Ottenere SupplierAdmin");
+	    System.out.println("6:	Richiamare metodo obtain_push_consumer sul SupplierAdmin");
+	    System.out.println("7: 		Richiamare metodo connect_push_supplier sul ProxyPushConsumer");
+	    System.out.println("8: 			Richiamare metodo push sul ProxyPushConsumer");
+	    System.out.println("9: 			Richiamare metodo disconnect_push_supplier sul PushSupplier");
 	    boolean valido=false;
 	    int scelta=0;
 	    while (!valido)
@@ -55,15 +56,6 @@ public class Client
 		}
 		else if (scelta==2)
 		{
-		    org.omg.CORBA.Object objRef = orb.string_to_object("corbaname::localhost:1050#SupplierAdmin");
-		    supplierAdmin = SupplierAdminHelper.narrow(objRef);
-		    if (supplierAdmin==null)
-			System.out.println("Client:\tNessun SupplierAdmin individuato!");
-		    else
-			System.out.println("Client:\tRestituito SupplierAdmin: "+supplierAdmin);
-		}
-		else if (scelta==3)
-		{
 		    if (consumerAdmin==null)
 			System.out.println("Client:\tNessun ConsumerAdmin individuato!");
 		    else
@@ -80,7 +72,55 @@ public class Client
 			}
 		    }
 		}
+		else if (scelta==3)
+		{
+		    if (proxyPushSupplier==null)
+			System.out.println("Client:\tNessun ProxyPushSupplier individuato!");
+		    else
+		    {
+			try
+			{
+			    if (push_consumer==null)
+				push_consumer=new PushConsumerImpl(orb);
+			    //Ottengo il riferimento al rootPOA e attivo il POAManager
+			    POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+			    rootPOA.the_POAManager().activate();
+			    //Attivo il servant associandolo al rootPOA e ottenendo il riferimento all'oggetto
+			    org.omg.CORBA.Object ref = rootPOA.servant_to_reference(push_consumer);
+			    proxyPushSupplier.connect_push_consumer(PushConsumerHelper.narrow(ref));
+			    System.out.println("Client:\tRichiamato metodo connect_push_consumer di ProxyPushSupplier");
+			}
+			catch(AlreadyConnected ac)
+			{
+			    System.out.println("Client:\tIl PushConsumer è gia connesso!");
+			}
+			catch(org.omg.CORBA.OBJECT_NOT_EXIST one)
+			{
+			    System.out.println("Client:\tProxyPushSupplier non esistente a causa della distruzione del canale!");
+			    proxyPushSupplier=null;
+			}
+		    }
+		}
 		else if (scelta==4)
+		{
+		    if (push_consumer==null)
+			System.out.println("Client:\tNessun PushConsumer individuato!");
+		    else
+		    {
+			push_consumer.disconnect_push_consumer();
+			System.out.println("Client:\tRichiamato metodo disconnect_push_consumer di PushConsumer");
+		    }
+		}
+		else if (scelta==5)
+		{
+		    org.omg.CORBA.Object objRef = orb.string_to_object("corbaname::localhost:1050#SupplierAdmin");
+		    supplierAdmin = SupplierAdminHelper.narrow(objRef);
+		    if (supplierAdmin==null)
+			System.out.println("Client:\tNessun SupplierAdmin individuato!");
+		    else
+			System.out.println("Client:\tRestituito SupplierAdmin: "+supplierAdmin);
+		}
+		else if (scelta==6)
 		{
 		    if (supplierAdmin==null)
 			System.out.println("Client:\tNessun SupplierAdmin individuato!");
@@ -98,7 +138,7 @@ public class Client
 			}
 		    }
 		}
-		else if (scelta==5)
+		else if (scelta==7)
 		{
 		    if (proxyPushConsumer==null)
 			System.out.println("Client:\tNessun ProxyPushConsumer individuato!");
@@ -128,7 +168,7 @@ public class Client
 			    try
 			    {
 				if (push_supplier==null)
-				    push_supplier=new PushSupplierImpl();
+				    push_supplier=new PushSupplierImpl(orb,proxyPushConsumer,data);
 				//Ottengo il riferimento al rootPOA e attivo il POAManager
 				POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 				rootPOA.the_POAManager().activate();
@@ -162,99 +202,24 @@ public class Client
 			}
 		    }
 		}
-		else if (scelta==6)
-		{
-		    if (proxyPushConsumer==null)
-			System.out.println("Client:\tNessun ProxyPushConsumer individuato!");
-		    else
-		    {
-			System.out.println("Inserisci il valore da sottomettere:");
-			valido=false;
-			while (!valido)
-			    try
-			    {
-				scelta=Integer.parseInt(System.console().readLine());
-				valido=true;
-			    }
-			    catch(Exception e)
-			    {
-				System.out.println("ATTENZIONE: Inserire un valore numerico!");
-			    }
-			try
-			{
-			    proxyPushConsumer.push(scelta);
-			    System.out.println("Client:\tRichiamato metodo push di ProxyPushConsumer con data: "+scelta);
-			}
-			catch(org.omg.CORBA.OBJECT_NOT_EXIST one)
-			{
-			    System.out.println("Client:\tProxyPushConsumer non esistente a causa della distruzione del canale!");
-			    proxyPushConsumer=null;
-			}
-		    }
-		}
-		else if (scelta==7)
-		{
-		    if (proxyPushConsumer==null)
-			System.out.println("Client:\tNessun ProxyPushConsumer individuato!");
-		    else
-		    {
-			try
-			{
-			    proxyPushConsumer.disconnect_push_consumer();
-			    System.out.println("Client:\tRichiamato metodo disconnect_push_consumer di ProxyPushConsumer");
-			}
-			catch(org.omg.CORBA.OBJECT_NOT_EXIST one)
-			{
-			    System.out.println("Client:\tProxyPushConsumer non esistente a causa della distruzione del canale!");
-			    proxyPushConsumer=null;
-			}
-		    }
-		}
 		else if (scelta==8)
 		{
-		    if (proxyPushSupplier==null)
-			System.out.println("Client:\tNessun ProxyPushSupplier individuato!");
+		    if (proxyPushConsumer==null)
+			System.out.println("Client:\tNessun ProxyPushConsumer individuato!");
 		    else
 		    {
-			try
-			{
-			    if (push_consumer==null)
-				push_consumer=new PushConsumerImpl();
-			    //Ottengo il riferimento al rootPOA e attivo il POAManager
-			    POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-			    rootPOA.the_POAManager().activate();
-			    //Attivo il servant associandolo al rootPOA e ottenendo il riferimento all'oggetto
-			    org.omg.CORBA.Object ref = rootPOA.servant_to_reference(push_consumer);
-			    proxyPushSupplier.connect_push_consumer(PushConsumerHelper.narrow(ref));
-			    System.out.println("Client:\tRichiamato metodo connect_push_consumer di ProxyPushSupplier");
-			}
-			catch(AlreadyConnected ac)
-			{
-			    System.out.println("Client:\tIl PushConsumer è gia connesso!");
-			}
-			catch(org.omg.CORBA.OBJECT_NOT_EXIST one)
-			{
-			    System.out.println("Client:\tProxyPushSupplier non esistente a causa della distruzione del canale!");
-			    proxyPushSupplier=null;
-			}
+			 System.out.println("Avviato il generatore di push");
+			 push_supplier.start_push();
 		    }
 		}
 		else if (scelta==9)
 		{
-		    if (proxyPushSupplier==null)
-			System.out.println("Client:\tNessun ProxyPushSupplier individuato!");
+		    if (push_supplier==null)
+			System.out.println("Client:\tNessun PushSupplier individuato!");
 		    else
 		    {
-			try
-			{
-			    proxyPushSupplier.disconnect_push_supplier();
-			    System.out.println("Client:\tRichiamato metodo disconnect_push_supplier di ProxyPushSupplier");
-			}
-			catch(org.omg.CORBA.OBJECT_NOT_EXIST one)
-			{
-			    System.out.println("Client:\tProxyPushSupplier non esistente a causa della distruzione del canale!");
-			    proxyPushSupplier=null;
-			}
+			push_supplier.disconnect_push_supplier();
+			System.out.println("Client:\tRichiamato metodo disconnect_push_supplier di PushSupplier");
 		    }
 		}
 		else
@@ -264,14 +229,14 @@ public class Client
 		System.out.println("Digita:");
 		System.out.println("0: Uscire");	
 		System.out.println("1: Ottenere ConsumerAdmin");
-		System.out.println("2: Ottenere SupplierAdmin");
-		System.out.println("3: Richiamare metodo obtain_push_supplier sul ConsumerAdmin");
-		System.out.println("4: Richiamare metodo obtain_push_consumer sul SupplierAdmin");
-		System.out.println("5: Richiamare metodo connect_push_supplier sul ProxyPushConsumer");
-		System.out.println("6: Richiamare metodo push sul ProxyPushConsumer");
-		System.out.println("7: Richiamare metodo disconnect_push_consumer sul ProxyPushConsumer");
-		System.out.println("8: Richiamare metodo connect_push_consumer sul ProxyPushSupplier");
-		System.out.println("9: Richiamare metodo disconnect_push_supplier sul ProxyPushSupplier");
+		System.out.println("2:     	Richiamare metodo obtain_push_supplier sul ConsumerAdmin");
+		System.out.println("3:         	Richiamare metodo connect_push_consumer sul ProxyPushSupplier");
+		System.out.println("4:         		Richiamare metodo disconnect_push_consumer sul PushConsumer");
+		System.out.println("5: Ottenere SupplierAdmin");
+		System.out.println("6:	Richiamare metodo obtain_push_consumer sul SupplierAdmin");
+		System.out.println("7: 		Richiamare metodo connect_push_supplier sul ProxyPushConsumer");
+		System.out.println("8: 			Richiamare metodo push sul ProxyPushConsumer");
+		System.out.println("9: 			Richiamare metodo disconnect_push_supplier sul PushSupplier");
 		valido=false;
 		while (!valido)
 		    try

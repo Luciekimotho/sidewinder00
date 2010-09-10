@@ -31,7 +31,7 @@ public class EventChannelImpl extends EventChannelPOA
 		//Ottengo il root naming context
 		org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 		NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio il binding del riferimento al consumer admin nel naming
 		NameComponent path[] = ncRef.to_name("ConsumerAdmin");
 		ncRef.bind(path, refConsumerAdmin);
 	    }
@@ -61,7 +61,7 @@ public class EventChannelImpl extends EventChannelPOA
 		//Ottengo il root naming context
 		org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 		NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio il binding del riferimento al supplier admin nel naming
 		NameComponent path[] = ncRef.to_name("SupplierAdmin");
 		ncRef.bind(path, refSupplierAdmin);
 	    } 
@@ -85,16 +85,18 @@ public class EventChannelImpl extends EventChannelPOA
 	    //Ottengo il root naming context
 	    org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 	    NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-	    //Faccio il binding del riferimento al supplier nel naming
+	    //Faccio l'unbinding del riferimento dell'event channel dal naming
 	    NameComponent path[] = ncRef.to_name("EventChannel");
 	    ncRef.unbind(path);
+	    //Ottengo l'id del servante e lo disattivo nel rootPOA
 	    byte[] id=rootPOA.servant_to_id(this);
 	    rootPOA.deactivate_object(id);
 	    if (refConsumerAdmin!=null)
 	    {
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio l'unbinding del riferimento del consumer admin dal naming
 		path = ncRef.to_name("ConsumerAdmin");
 		ncRef.unbind(path);
+		//Ottengo il servante consumer admin dal suo riferimento, chiamo il metodo destroy su di esso e lo disattivo nel rootPOA
 		ConsumerAdminImpl consumerAdmin=(ConsumerAdminImpl)rootPOA.reference_to_servant(refConsumerAdmin);
 		consumerAdmin.destroy();
 		id=rootPOA.servant_to_id(consumerAdmin);
@@ -103,9 +105,10 @@ public class EventChannelImpl extends EventChannelPOA
 	    }
 	    if (refSupplierAdmin!=null)
 	    {
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio l'unbinding del riferimento del supplier admin dal naming
 		path = ncRef.to_name("SupplierAdmin");
 		ncRef.unbind(path);
+		//Ottengo il servante supplier admin dal suo riferimento, chiamo il metodo destroy su di esso e lo disattivo nel rootPOA
 		SupplierAdminImpl supplierAdmin=(SupplierAdminImpl)rootPOA.reference_to_servant(refSupplierAdmin);
 		supplierAdmin.destroy();
 		id=rootPOA.servant_to_id(supplierAdmin);

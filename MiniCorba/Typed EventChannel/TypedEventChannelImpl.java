@@ -1,5 +1,4 @@
 import CosTypedEventChannelAdmin.*;
-import CosEventChannelAdmin.*;
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.CosNaming.*;
@@ -32,7 +31,7 @@ public class TypedEventChannelImpl extends TypedEventChannelPOA
 		//Ottengo il root naming context
 		org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 		NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio il binding del riferimento al typed consumer admin nel naming
 		NameComponent path[] = ncRef.to_name("TypedConsumerAdmin");
 		ncRef.bind(path, refTypedConsumerAdmin);
 	    }
@@ -62,7 +61,7 @@ public class TypedEventChannelImpl extends TypedEventChannelPOA
 		//Ottengo il root naming context
 		org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 		NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio il binding del riferimento al typed supplier admin nel naming
 		NameComponent path[] = ncRef.to_name("TypedSupplierAdmin");
 		ncRef.bind(path, refTypedSupplierAdmin);
 	    } 
@@ -86,16 +85,18 @@ public class TypedEventChannelImpl extends TypedEventChannelPOA
 	    //Ottengo il root naming context
 	    org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
 	    NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-	    //Faccio il binding del riferimento al supplier nel naming
+	    //Faccio l'unbinding del riferimento del typed event channel dal naming
 	    NameComponent path[] = ncRef.to_name("TypedEventChannel");
 	    ncRef.unbind(path);
+	    //Ottengo l'id del servante e lo disattivo nel rootPOA
 	    byte[] id=rootPOA.servant_to_id(this);
 	    rootPOA.deactivate_object(id);
 	    if (refTypedConsumerAdmin!=null)
 	    {
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio l'unbinding del riferimento del typed consumer admin dal naming
 		path = ncRef.to_name("TypedConsumerAdmin");
 		ncRef.unbind(path);
+		//Ottengo il servante typed consumer admin dal suo riferimento, chiamo il metodo destroy su di esso e lo disattivo nel rootPOA
 		TypedConsumerAdminImpl typedConsumerAdmin=(TypedConsumerAdminImpl)rootPOA.reference_to_servant(refTypedConsumerAdmin);
 		typedConsumerAdmin.destroy();
 		id=rootPOA.servant_to_id(typedConsumerAdmin);
@@ -104,9 +105,10 @@ public class TypedEventChannelImpl extends TypedEventChannelPOA
 	    }
 	    if (refTypedSupplierAdmin!=null)
 	    {
-		//Faccio il binding del riferimento al supplier nel naming
+		//Faccio l'unbinding del riferimento del typed supplier admin dal naming
 		path = ncRef.to_name("TypedSupplierAdmin");
 		ncRef.unbind(path);
+		//Ottengo il servante typed supplier admin dal suo riferimento, chiamo il metodo destroy su di esso e lo disattivo nel rootPOA
 		TypedSupplierAdminImpl typedSupplierAdmin=(TypedSupplierAdminImpl)rootPOA.reference_to_servant(refTypedSupplierAdmin);
 		typedSupplierAdmin.destroy();
 		id=rootPOA.servant_to_id(typedSupplierAdmin);
@@ -116,7 +118,7 @@ public class TypedEventChannelImpl extends TypedEventChannelPOA
 	} 
 	catch(Exception e) 
 	{ 
-	    System.out.println("TypedEventChannelImpl:\tATTENZIONE: Impossibile gestire la distruzione del typed event channel e di tutto ciò che è a lui collegato!\nMotivo: "+e.getCause());
+	    System.out.println("EventChannelImpl:\tATTENZIONE: Impossibile gestire la distruzione dell'event channel e di tutto ciò che è a lui collegato!\nMotivo: "+e.getCause());
 	}
     };
 }

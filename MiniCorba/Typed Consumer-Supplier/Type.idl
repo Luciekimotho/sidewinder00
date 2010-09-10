@@ -1,10 +1,10 @@
+#include "CosEventComm.idl"
+
 module Type 
 {
-    exception Disconnected{};
-
     interface I
     {
-	void push (in string data) raises(Disconnected);
+	void push (in string data) raises(CosEventComm::Disconnected);
 	void disconnect_push_consumer();
     };
 };
