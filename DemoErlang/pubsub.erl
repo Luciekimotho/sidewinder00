@@ -124,32 +124,34 @@ serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 			end;
 			
 		%% Start publishing a message
-		{startPublish, Name, Value} ->
-			io:fwrite("Publishing ~w~n", [{Name, Value}]),
-			{server, Parent} ! {publish, Name, Value, node()},
+		{startPublish, Name, Value, PidAck} ->
+			io:fwrite("Publishing ~p~n", [{Name, Value}]),
+			{server, Parent} ! {publish, Name, Value, node(), PidAck},
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 			
 		%% Publish a new message
-		{publish, Name, Value, SourceNode} ->
+		{publish, Name, Value, SourceNode, PidAck} ->
 			if
 				IsServer == yes ->
+					PidAck ! ok,
 					relayMessage(Name, Value, Subscriptions, SourceNode);
 				IsServer == no ->
-					io:fwrite("Message received: ~w~n", [{Name, Value}])
+					io:fwrite("Message received: ~p~n", [{Name, Value}])
 			end,
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 		
 		%% Subscribes (client mode)
-		{startSubscription, Subscription} ->
+		{startSubscription, Subscription, PidAck} ->
 			io:fwrite("Subscribing (user initiated)~n"),
-			{server, Parent} ! {subscribe, node(), Subscription},
+			{server, Parent} ! {subscribe, node(), Subscription, PidAck},
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 			
 		%% Handles a subscription request (server mode)
-		{subscribe, Node, Subscription} ->
+		{subscribe, Node, Subscription, PidAck} ->
 			if
 				IsServer == yes ->
 					io:fwrite("Subscription request received...~n"),
+					PidAck ! ok,
 					propagateSubscription(Parent, Children, Node, Subscription),
 					NewSubscriptions = addSubscription({Subscription, Node}, Subscriptions, []),
 					PidHandler ! {subscription,NewSubscriptions},
@@ -173,16 +175,17 @@ serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 			serverLoop(Parent, Children, Subscriptions, IsServer,PidHandler);
 			
 		%% Unsubscribes (client mode)
-		{startUnsubscribe, Subscription} ->
+		{startUnsubscribe, Subscription, PidAck} ->
 			io:fwrite("Unsubscribe (user initiated)~n"),
-			{server, Parent} ! {unsubscribe, node(), Subscription},
+			{server, Parent} ! {unsubscribe, node(), Subscription, PidAck},
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 			
 		%% Handles an unsubscription request (server mode)
-		{unsubscribe, Node, Subscription} ->
+		{unsubscribe, Node, Subscription, PidAck} ->
 			if
 				IsServer == yes ->
 					io:fwrite("Unsubscribe request received...~n"),
+					PidAck ! ok,
 					propagateUnsubscribe(Parent, Children, Node, Subscription),
 					NewSubscriptions = removeSubscription(Subscription, Node, Subscriptions, []),
 					PidHandler ! {subscription,NewSubscriptions},
@@ -203,9 +206,9 @@ serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 			serverLoop(Parent, NewChildren, Subscriptions, IsServer, PidHandler);
 			
 		%% Ping message received
-		ping ->
+		{ping,PidAck} ->
 			io:fwrite("Ping received!~n"),
-			{server,Parent} ! ok,
+			PidAck ! ok,
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 
 		%% Crash message received
@@ -216,7 +219,7 @@ serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 		{removeChildren, NodeToRemove} ->
 			if
 				IsServer == yes ->
-					io:fwrite("Children ~w has exited, removing it...~n", [NodeToRemove]),
+					io:fwrite("Children ~p has exited, removing it...~n", [NodeToRemove]),
 					NewChildren = lists:delete(NodeToRemove, Children),
 					NewSubscriptions = removeNodeFromSubscription(Parent, NewChildren, NodeToRemove, Subscriptions, []),
 					serverLoop(Parent, NewChildren, NewSubscriptions, IsServer, PidHandler);
@@ -251,7 +254,13 @@ setParent() ->
 	
 %% Triggers the publish of a new message
 publish(Name, Value) ->
-	server ! {startPublish, Name, Value}.
+	server ! {startPublish, Name, Value, self()},
+	receive
+	    ok -> ok
+	    after 500 -> 
+		io:fwrite("Il server non risponde, riprova!~n"),
+		errore
+	end.
 	
 %% Relays the message to all the subscribed nodes
 relayMessage(_, _, [], _) ->
@@ -272,11 +281,23 @@ sendMessage(MsgName, MsgValue, [Node | Nodes], SourceNode) ->
 	
 %% Triggers an unsubscription
 unsubscribe(Subscription) ->
-	server ! {startUnsubscribe, Subscription}.
+	server ! {startUnsubscribe, Subscription, self()},
+	receive
+	    ok -> ok
+	    after 500 -> 
+		io:fwrite("Il server non risponde, riprova!~n"),
+		errore
+	end.
 	
 %% Triggers a subscription
 subscribe(Subscription) ->
-	server ! {startSubscription, Subscription}.
+	server ! {startSubscription, Subscription, self()},
+	receive
+	    ok -> ok
+	    after 500 -> 
+		io:fwrite("Il server non risponde, riprova!~n"),
+		errore
+	end.
 	
 %% Triggers the printing of the subscription list (debug only)
 printSubscriptions() ->
@@ -387,7 +408,7 @@ removeSubscription(SubToRemove, NodeToRemove, [Sub | OtherSub], NewSubscriptions
 printSubscriptionList([]) ->
 	ok;
 printSubscriptionList([Subscription | Subscriptions]) ->
-	io:fwrite("Subscription: ~w~n", [Subscription]),
+	io:fwrite("Subscription: ~p~n", [Subscription]),
 	printSubscriptionList(Subscriptions).
 	
 %% Start a children ping
@@ -400,8 +421,8 @@ executePingChildren([],ChildrenList) ->
 	io:fwrite("Ping complete!~n"),
 	ChildrenList;
 executePingChildren([Child | Children],ChildrenList) ->
-	io:fwrite("Pinging ~w ~n", [Child]),
-	{server, Child} ! ping,
+	io:fwrite("Pinging ~p ~n", [Child]),
+	{server, Child} ! {ping,self()},
 	receive
 	    ok -> 
 		io:fwrite("Ricevuto ack del ping...~n"),
