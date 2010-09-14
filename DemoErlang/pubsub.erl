@@ -35,9 +35,11 @@ restartServer(Parent,Children,Subscription) ->
 			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge subscribe con padre:",NewParentSubscription1]),
 			NewParentSubscription2=mergeUnsubscription(ParentSubscription,NewParentSubscription1,[],Parent,Children,Parent),
 			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge unsubscribe con padre:",NewParentSubscription2]),
-			NewSubscription=requestChildrenSubscripionList(Children,NewParentSubscription2,Parent,Children),
+			%%Verifico se i miei figli sono ancora connessi mandando un ping, se non rispondono allora li elimino perchè probabilemte hanno richiesto di uscire mentre ero giu
+			NewChildren=executePingChildren(Children,[]),
+			NewSubscription=requestChildrenSubscripionList(NewChildren,NewParentSubscription2,Parent,NewChildren),
 			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge:",NewSubscription]),
-			Pid = spawn(fun() -> serverLoop(Parent, Children, NewSubscription, yes, []) end),
+			Pid = spawn(fun() -> serverLoop(Parent, NewChildren, NewSubscription, yes, []) end),
 			register(server, Pid),
 			io:fwrite("Server restarted!~n"),
 			setParent(),
@@ -69,24 +71,6 @@ handlerLoop(Parent,Children,Subscription,Pid) ->
 	    io:fwrite("Update subscription~n"),
 	    handlerLoop(Parent,Children,NewSubscription,Pid)
     end.
-
-%% Get the subscription list from childred
-requestChildrenSubscripionList([],Subscription,_,_) ->
-	Subscription;
-requestChildrenSubscripionList([Child | OtherChilds],Subscription,Parent,Children) ->
-	{server,Child}!{getSubscriptions,self(),node()},
-	receive
-	    {subscriptionList,ChildSubscription}->
-		io:format("~s ~p~n~s ~p~n",["Mio:",Subscription,"Figlio:",ChildSubscription]),			
-		%%Aggiunge tutto ciò che c'è nella nuova subscription (1* parametro) a quello che c'è nella mia (2* parametro) partendo dalla situazione iniziale mia (3* parametro). Il 4* parametro viene usato per avvertire i restanti nodi qualora aggiungo una sottoscrizione a me visto che ero giu e non ho potuto inoltrare la notifica
-		NewChildSubscription1=mergeSubscription(ChildSubscription,Subscription,Subscription,Parent,Children,Child),
-		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge subscribe con figlo:",NewChildSubscription1]),
-		NewChildSubscription2=mergeUnsubscription(ChildSubscription,NewChildSubscription1,[],Parent,Children,Child),
-		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge unsubscribe con figlo:",NewChildSubscription2]),
-		requestChildrenSubscripionList(OtherChilds,NewChildSubscription2,Parent,Children);
-	    subscriptionList->
-		requestChildrenSubscripionList(OtherChilds,Subscription,Parent,Children)
-	end.
 
 serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 	receive
@@ -215,12 +199,13 @@ serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler) ->
 		
 		%% Start pinging the children	
 		pingChildren ->
-			executePingChildren(Children),
-			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
+			NewChildren=executePingChildren(Children,[]),
+			serverLoop(Parent, NewChildren, Subscriptions, IsServer, PidHandler);
 			
 		%% Ping message received
 		ping ->
 			io:fwrite("Ping received!~n"),
+			{server,Parent} ! ok,
 			serverLoop(Parent, Children, Subscriptions, IsServer, PidHandler);
 
 		%% Crash message received
@@ -405,18 +390,45 @@ printSubscriptionList([Subscription | Subscriptions]) ->
 	io:fwrite("Subscription: ~w~n", [Subscription]),
 	printSubscriptionList(Subscriptions).
 	
-%% Start a children ping (debug only)
+%% Start a children ping
 pingChildren() ->
 	io:fwrite("Pinging all children...~n"),
 	server ! pingChildren.
 	
-%% Execute a children ping (debug only)
-executePingChildren([]) ->
-	io:fwrite("Ping complete!~n");
-executePingChildren([Child | Children]) ->
+%% Execute a children ping
+executePingChildren([],ChildrenList) ->
+	io:fwrite("Ping complete!~n"),
+	ChildrenList;
+executePingChildren([Child | Children],ChildrenList) ->
 	io:fwrite("Pinging ~w ~n", [Child]),
 	{server, Child} ! ping,
-	executePingChildren(Children).
+	receive
+	    ok -> 
+		io:fwrite("Ricevuto ack del ping...~n"),
+		NewChildrenList=[Child|ChildrenList],
+		executePingChildren(Children,NewChildrenList)
+	    after 500 -> 
+		io:fwrite("Il figlio non risponde, lo rimuovo dalla lista...~n"),
+		executePingChildren(Children,ChildrenList)
+	end.
+
+%% Get the subscription list from childred
+requestChildrenSubscripionList([],Subscription,_,_) ->
+	Subscription;
+requestChildrenSubscripionList([Child | OtherChilds],Subscription,Parent,Children) ->
+	{server,Child}!{getSubscriptions,self(),node()},
+	receive
+	    {subscriptionList,ChildSubscription}->
+		io:format("~s ~p~n~s ~p~n",["Mio:",Subscription,"Figlio:",ChildSubscription]),			
+		%%Aggiunge tutto ciò che c'è nella nuova subscription (1* parametro) a quello che c'è nella mia (2* parametro) partendo dalla situazione iniziale mia (3* parametro). Il 4* parametro viene usato per avvertire i restanti nodi qualora aggiungo una sottoscrizione a me visto che ero giu e non ho potuto inoltrare la notifica
+		NewChildSubscription1=mergeSubscription(ChildSubscription,Subscription,Subscription,Parent,Children,Child),
+		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge subscribe con figlo:",NewChildSubscription1]),
+		NewChildSubscription2=mergeUnsubscription(ChildSubscription,NewChildSubscription1,[],Parent,Children,Child),
+		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge unsubscribe con figlo:",NewChildSubscription2]),
+		requestChildrenSubscripionList(OtherChilds,NewChildSubscription2,Parent,Children);
+	    subscriptionList->
+		requestChildrenSubscripionList(OtherChilds,Subscription,Parent,Children)
+	end.
 	
 %get only the subscription where the destination isn't Node and with my node in the other
 modifySubscriptions([],_,Result) ->
