@@ -1,7 +1,12 @@
-pubsub:subscribe("temp").
+5
+pubsub:subscribe("a").
 
-pubsub:subscribe("pressione").
+pubsub:subscribe("d").
 
-pubsub:unsubscribe("pressione").
+6
+pubsub:subscribe("b").
+pubsub:subscribe("c").
+
+pubsub:unsubscribe("c").
 
 pubsub:printSubscriptions().
