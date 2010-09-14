@@ -3,14 +3,14 @@
 		subscribe/1, printSubscriptions/0, publish/2, closeApp/0,
 		unsubscribe/1,crash/0]).
 
-startClient(Parent) ->
+startClient([Parent]) ->
 	io:fwrite("Starting client...~n"),
 	Pid = spawn(fun() -> serverLoop(Parent, [], [], no, []) end),
 	register(server, Pid),
 	io:fwrite("Client started!~n"),
 	setParent().
 
-startServer(Parent) ->
+startServer([Parent]) ->
 	io:fwrite("Starting server...~n"),
 	Pid = spawn(fun() -> serverLoop(Parent, [], [], yes, []) end),
 	register(server, Pid),
@@ -31,10 +31,12 @@ restartServer(Parent,Children,Subscription) ->
 		    {subscriptionList,ParentSubscription}->
 			io:format("~s ~p~n~s ~p~n",["Mio:",Subscription,"Padre:",ParentSubscription]),			
 			%%Aggiunge tutto ciò che c'è nella nuova subscription (1* parametro) a quello che c'è nella mia (2* parametro) partendo dalla situazione iniziale mia (3* parametro). Il 4* parametro viene usato per avvertire i restanti nodi qualora aggiungo una sottoscrizione a me visto che ero giu e non ho potuto inoltrare la notifica
-			NewParentSubscription=merge(ParentSubscription,Subscription,Subscription,Parent,Children,Parent),
-			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge con padre:",NewParentSubscription]),
-			NewSubscription=requestChildrenSubscripionList(Children,NewParentSubscription,Parent,Children),
-			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge con tutti i figli:",NewSubscription]),
+			NewParentSubscription1=mergeSubscription(ParentSubscription,Subscription,Subscription,Parent,Children,Parent),
+			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge subscribe con padre:",NewParentSubscription1]),
+			NewParentSubscription2=mergeUnsubscription(ParentSubscription,NewParentSubscription1,[],Parent,Children,Parent),
+			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge unsubscribe con padre:",NewParentSubscription2]),
+			NewSubscription=requestChildrenSubscripionList(Children,NewParentSubscription2,Parent,Children),
+			io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge:",NewSubscription]),
 			Pid = spawn(fun() -> serverLoop(Parent, Children, NewSubscription, yes, []) end),
 			register(server, Pid),
 			io:fwrite("Server restarted!~n"),
@@ -77,9 +79,11 @@ requestChildrenSubscripionList([Child | OtherChilds],Subscription,Parent,Childre
 	    {subscriptionList,ChildSubscription}->
 		io:format("~s ~p~n~s ~p~n",["Mio:",Subscription,"Figlio:",ChildSubscription]),			
 		%%Aggiunge tutto ciò che c'è nella nuova subscription (1* parametro) a quello che c'è nella mia (2* parametro) partendo dalla situazione iniziale mia (3* parametro). Il 4* parametro viene usato per avvertire i restanti nodi qualora aggiungo una sottoscrizione a me visto che ero giu e non ho potuto inoltrare la notifica
-		NewChildSubscription=merge(ChildSubscription,Subscription,Subscription,Parent,Children,Child),
-		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge con figlo:",NewChildSubscription]),
-		requestChildrenSubscripionList(OtherChilds,NewChildSubscription,Parent,Children);
+		NewChildSubscription1=mergeSubscription(ChildSubscription,Subscription,Subscription,Parent,Children,Child),
+		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge subscribe con figlo:",NewChildSubscription1]),
+		NewChildSubscription2=mergeUnsubscription(ChildSubscription,NewChildSubscription1,[],Parent,Children,Child),
+		io:format("~s ~p~n",["Nuove sottoscrizioni dopo merge unsubscribe con figlo:",NewChildSubscription2]),
+		requestChildrenSubscripionList(OtherChilds,NewChildSubscription2,Parent,Children);
 	    subscriptionList->
 		requestChildrenSubscripionList(OtherChilds,Subscription,Parent,Children)
 	end.
@@ -423,19 +427,37 @@ modifySubscriptions([{Attr,_}|Other],Node,Result) ->
 	modifySubscriptions(Other, Node, [{Attr,[node()]}|Result]).
 	
 %Merge the content of the 2 subscription list
-merge([],_,Result,_,_,_)->
+mergeSubscription([],_,Result,_,_,_)->
     Result;
-merge([{Attr,[To]}|Subscription1Tail],Subscription2,Result,Parent,Children,NodoMittente)->
+mergeSubscription([{Attr,[To]}|Subscription1Tail],Subscription2,Result,Parent,Children,NodoMittente)->
     Res=matches({Attr,[To]},Subscription2),
     if 
 	Res==no->
 	    %%Notifico agli altri che ho aggiunto questa sottoscrizione modificando l'unica sottoscrizione per metterla a me
 	    propagateSubscription(Parent,Children,NodoMittente,Attr),
-	    merge(Subscription1Tail,Subscription2,[{Attr,[To]}|Result],Parent,Children,NodoMittente);
+	    mergeSubscription(Subscription1Tail,Subscription2,[{Attr,[To]}|Result],Parent,Children,NodoMittente);
 	true->
-	    merge(Subscription1Tail,Subscription2,Result,Parent,Children,NodoMittente)
+	    mergeSubscription(Subscription1Tail,Subscription2,Result,Parent,Children,NodoMittente)
     end.
 
+mergeUnsubscription(_,[],Result,_,_,_)->
+    Result;
+mergeUnsubscription(Subscription2,[{Attr,[To]}|Subscription1Tail],Result,Parent,Children,NodoMittente)->
+    if
+	%% Confronto solo quelli che ho nella subscription con nodo uguale a quello suo (??VERIFICARE??)
+	To==NodoMittente->
+	    Res=matches({Attr,[To]},Subscription2),
+	    if 
+		Res==no->
+		    %%Notifico agli altri che ho rimosso questa sottoscrizione
+		    propagateUnsubscribe(Parent,Children,NodoMittente,Attr),
+		    mergeUnsubscription(Subscription2,Subscription1Tail,Result,Parent,Children,NodoMittente);
+		true->
+		    mergeUnsubscription(Subscription2,Subscription1Tail,[{Attr,[To]}|Result],Parent,Children,NodoMittente)
+	    end;
+	true->
+	    mergeUnsubscription(Subscription2,Subscription1Tail,[{Attr,[To]}|Result],Parent,Children,NodoMittente)
+    end.
 %% Searches for an item in a list
 %% Maybe we could use lists:member
 matches(_, []) ->

@@ -1,17 +1,7 @@
-c(pubsub).
-pubsub:startServer(node1@localhost).
-
-c(pubsub).
-pubsub:startServer(node2@localhost).
-
-c(pubsub).
-pubsub:startClient(node2@localhost).
 pubsub:subscribe("temp").
-pubsub:subscribe("pres").
 
-c(pubsub).
-pubsub:startClient(node3@localhost).
-pubsub:subscribe("umidità").
-pubsub:subscribe("vel").
+pubsub:subscribe("pressione").
 
-pubsub:unsubscribe("vel").
+pubsub:unsubscribe("pressione").
+
+pubsub:printSubscriptions().
